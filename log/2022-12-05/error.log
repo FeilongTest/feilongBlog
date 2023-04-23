@@ -1,0 +1,6 @@
+[blog]2022/12/05 - 12:50:50.057	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+[blog]2022/12/05 - 12:51:59.742	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+[blog]2022/12/05 - 12:53:26.404	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+[blog]2022/12/05 - 12:54:22.210	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+[blog]2022/12/05 - 12:54:32.477	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+[blog]2022/12/05 - 12:54:52.076	[31merror[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:30	listen tcp :8888: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.

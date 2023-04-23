@@ -1,0 +1,30 @@
+[blog]2023/04/20 - 06:44:50.480	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 06:44:50.498	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:25	router register success
+[blog]2023/04/20 - 06:44:50.506	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:04:57.888	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:04:57.900	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:25	router register success
+[blog]2023/04/20 - 07:04:57.904	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:05:27.647	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:05:27.658	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:25	router register success
+[blog]2023/04/20 - 07:05:27.662	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:07:23.073	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:07:23.089	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:07:23.092	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:08:05.099	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:08:05.112	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:08:05.123	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:08:37.507	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:08:37.519	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:08:37.529	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:08:52.785	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:08:52.799	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:08:52.805	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:09:31.474	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:09:31.485	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:09:31.496	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:10:03.652	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:10:03.664	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:10:03.669	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
+[blog]2023/04/20 - 07:12:42.241	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/gorm.go:29	register table success
+[blog]2023/04/20 - 07:12:42.258	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/initialize/router.go:26	router register success
+[blog]2023/04/20 - 07:12:42.269	[34minfo[0m	C:/Users/陈王/GolandProjects/feilongBlog/core/server.go:23	server run success on 	{"address": ":8888"}
