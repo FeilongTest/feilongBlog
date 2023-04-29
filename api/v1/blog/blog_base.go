@@ -7,12 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ArticleApi struct {
+type BaseApi struct {
 }
 
-var articleApi = blog.ArticleService{}
+var baseApi = blog.BaseService{}
 
-func (a *ArticleApi) GetArticleList(c *gin.Context) {
+func (a *BaseApi) GetCategoryList(c *gin.Context) {
+	categoryList, err := baseApi.GetCategoryList()
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+	} else {
+		response.OkWithDetailed(categoryList, "获取成功", c)
+	}
+	return
+}
+
+func (a *BaseApi) GetArticleList(c *gin.Context) {
 	var pageInfo model.ArticleSearch
 	err := c.ShouldBindQuery(&pageInfo)
 	if err != nil {

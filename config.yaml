@@ -7,7 +7,7 @@ mysql:
   config: charset=utf8mb4&parseTime=True&loc=Local
   db-name: blog
   username: root
-  password: root
+  password: 123456
   prefix: ""
   singular: false
   engine: ""
@@ -17,7 +17,7 @@ mysql:
   log-zap: false
 system:
   env: public
-  addr: 8888
+  addr: 8889
   db-type: mysql
   oss-type: local
   use-multipoint: false
@@ -45,3 +45,18 @@ zap:
   max-age: 0
   show-line: true
   log-in-console: true
+cors:
+  mode: whitelist
+  whitelist:
+    - allow-origin: example1.com
+      allow-methods: GET, POST
+      allow-headers: content-type
+      expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,
+        Content-Type
+      allow-credentials: true
+    - allow-origin: example2.com
+      allow-methods: GET, POST
+      allow-headers: content-type
+      expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,
+        Content-Type
+      allow-credentials: true
