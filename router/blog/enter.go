@@ -10,10 +10,12 @@ type ApiRouter struct{}
 func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 	apiRouterWithoutRecord := Router.Group("base")
 	baseRouterApi := v1.ApiGroupApp.BaseApiGroup
+	articleApi := v1.ApiGroupApp.ArticleApiGroup
+	categoryApi := v1.ApiGroupApp.CategoryApiGroup
 	{
-		apiRouterWithoutRecord.GET("getCategoryList", baseRouterApi.GetCategoryList) // 创建Api
-		apiRouterWithoutRecord.GET("getArticleList", baseRouterApi.GetArticleList)
-		//TODO Login、GetArticle、
+		apiRouterWithoutRecord.POST("login", baseRouterApi.Login)                  // 登录
+		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList) // 获取分类
+		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)    //获取文章列表
 	}
 }
 
@@ -31,4 +33,13 @@ func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {
 	//{
 	//	apiRouterWithoutRecord.POST("getArticleList", apiRouterApi.) // 创建Api
 	//}
+}
+
+func (s *ApiRouter) InitCategoryRouter(Router *gin.RouterGroup) {
+	apiRouterWithoutRecord := Router.Group("category")
+	apiRouterApi := v1.ApiGroupApp.CategoryApiGroup
+	{
+		apiRouterWithoutRecord.GET("getCategoryList", apiRouterApi.GetCategoryList) //查
+		//TODO 增删改
+	}
 }

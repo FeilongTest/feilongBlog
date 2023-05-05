@@ -22,8 +22,6 @@ system:
   oss-type: local
   use-multipoint: false
   use-redis: false
-  iplimit-count: 15000
-  iplimit-time: 3600
 timer:
   start: true
   spec: '@daily'
@@ -60,3 +58,8 @@ cors:
       expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,
         Content-Type
       allow-credentials: true
+jwt:
+  signing-key: 09ea616e-d514-49ea-8309-7193414cf504
+  expires-time: 7d
+  buffer-time: 1d
+  issuer: blog

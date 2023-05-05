@@ -1,11 +1,7 @@
 package blog
 
-import (
-	"feilongBlog/global"
-)
-
 type User struct {
-	global.GVA_MODEL
+	ID       uint   `gorm:"primarykey"` // 主键ID
 	Username string `json:"userName" gorm:"index;comment:用户登录名"`
 	Password string `json:"-"  gorm:"comment:用户登录密码"`
 	Pic      string `json:"pic" gorm:"pic;comment:用户头像"`
@@ -20,4 +16,17 @@ type User struct {
 
 func (User) TableName() string {
 	return "blog_user"
+}
+
+type Login struct {
+	Username  string `json:"username"`  // 用户名
+	Password  string `json:"password"`  // 密码
+	Captcha   string `json:"captcha"`   // 验证码
+	CaptchaId string `json:"captchaId"` // 验证码ID
+}
+
+type LoginResponse struct {
+	User      User   `json:"user"`
+	Token     string `json:"token"`
+	ExpiresAt int64  `json:"expiresAt"`
 }

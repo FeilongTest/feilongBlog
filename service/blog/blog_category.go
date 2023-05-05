@@ -2,16 +2,16 @@ package blog
 
 import (
 	"feilongBlog/global"
-	"feilongBlog/model/blog"
+	model "feilongBlog/model/blog"
 )
 
-type BaseService struct {
+type CategoryService struct {
 }
 
 // GetCategoryList 获取分类列表
-func (s *BaseService) GetCategoryList() (list []blog.Category, err error) {
-	var child []blog.Category
-	var root []blog.Category
+func (s *CategoryService) GetCategoryList() (list []model.Category, err error) {
+	var child []model.Category
+	var root []model.Category
 	err = global.BLOG_DB.Where("fid = ?", 0).Order("sort desc").Find(&root).Error
 	if err != nil {
 		return
