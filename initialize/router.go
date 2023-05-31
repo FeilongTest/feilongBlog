@@ -5,6 +5,7 @@ import (
 	"feilongBlog/middleware"
 	"feilongBlog/router"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // 初始化总路由
@@ -17,6 +18,8 @@ func Routers() *gin.Engine {
 	//Router.Use(middleware.Cors()) // 直接放行全部跨域请求
 	//Router.Use(middleware.CorsByRules()) // 按照配置的规则放行跨域请求
 	//global.GVA_LOG.Info("use middleware cors")
+	Router.StaticFS(global.BLOG_CONFIG.Local.Path, http.Dir(global.BLOG_CONFIG.Local.StorePath)) // 为用户头像和文件提供静态地址
+
 	PublicGroup := Router.Group("")
 	{
 		// 健康监测
@@ -33,7 +36,9 @@ func Routers() *gin.Engine {
 	PrivateGroup := Router.Group("/admin")
 	PrivateGroup.Use(middleware.JWTAuth()).Use()
 	{
+		blogRouter.InitFileRouter(PrivateGroup)
 		blogRouter.InitCategoryRouter(PrivateGroup)
+		blogRouter.InitArticleRouter(PrivateGroup)
 	}
 	global.BLOG_LOG.Info("router register success")
 	return Router

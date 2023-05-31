@@ -1,5 +1,8 @@
 package utils
 
 var (
-	LoginVerify = Rules{"Username": {NotEmpty()}, "Password": {NotEmpty()}}
+	IdVerify       = Rules{"ID": []string{NotEmpty()}}
+	LoginVerify    = Rules{"Username": {NotEmpty()}, "Password": {NotEmpty()}}
+	CategoryVerify = Rules{"Name": {NotEmpty()}}
+	ArticleVerify  = Rules{"Title": {NotEmpty()}}
 )

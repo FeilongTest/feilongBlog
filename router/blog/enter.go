@@ -9,13 +9,14 @@ type ApiRouter struct{}
 
 func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 	apiRouterWithoutRecord := Router.Group("base")
-	baseRouterApi := v1.ApiGroupApp.BaseApiGroup
-	articleApi := v1.ApiGroupApp.ArticleApiGroup
-	categoryApi := v1.ApiGroupApp.CategoryApiGroup
+	var userRouterApi = v1.ApiGroupApp.UserApiGroup
+	var articleApi = v1.ApiGroupApp.ArticleApiGroup
+	var categoryApi = v1.ApiGroupApp.CategoryApiGroup
 	{
-		apiRouterWithoutRecord.POST("login", baseRouterApi.Login)                  // 登录
+		apiRouterWithoutRecord.POST("login", userRouterApi.Login)                  // 登录
 		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList) // 获取分类
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)    //获取文章列表
+		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)           //获取文章信息
 	}
 }
 
@@ -28,18 +29,34 @@ func (s *ApiRouter) InitUserRouter(Router *gin.RouterGroup) {
 }
 
 func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {
-	//apiRouterWithoutRecord := Router.Group("article")
-	//apiRouterApi := v1.ApiGroupApp.BlogApiGroup
-	//{
-	//	apiRouterWithoutRecord.POST("getArticleList", apiRouterApi.) // 创建Api
-	//}
+	apiRouterWithoutRecord := Router.Group("article")
+	apiRouterApi := v1.ApiGroupApp.ArticleApiGroup
+	{
+		apiRouterWithoutRecord.POST("getArticle", apiRouterApi.GetArticle)
+		apiRouterWithoutRecord.GET("getArticleList", apiRouterApi.GetArticleList)
+		apiRouterWithoutRecord.POST("createArticle", apiRouterApi.CreateArticle)
+		apiRouterWithoutRecord.DELETE("delArticle", apiRouterApi.DelArticleById)
+		apiRouterWithoutRecord.DELETE("delArticleByIds", apiRouterApi.DelArticleByIds)
+		apiRouterWithoutRecord.PUT("updateArticle", apiRouterApi.UpdateArticleById)
+	}
 }
 
 func (s *ApiRouter) InitCategoryRouter(Router *gin.RouterGroup) {
 	apiRouterWithoutRecord := Router.Group("category")
 	apiRouterApi := v1.ApiGroupApp.CategoryApiGroup
 	{
-		apiRouterWithoutRecord.GET("getCategoryList", apiRouterApi.GetCategoryList) //查
-		//TODO 增删改
+		apiRouterWithoutRecord.GET("getCategoryList", apiRouterApi.GetCategoryList)
+		apiRouterWithoutRecord.POST("createCategory", apiRouterApi.CreateCategory)
+		apiRouterWithoutRecord.DELETE("delCategory", apiRouterApi.DelCategoryById)
+		apiRouterWithoutRecord.DELETE("delCategoryByIds", apiRouterApi.DelCategoryByIds)
+		apiRouterWithoutRecord.PUT("updateCategory", apiRouterApi.UpdateCategoryById)
+	}
+}
+
+func (s *ApiRouter) InitFileRouter(Router *gin.RouterGroup) {
+	apiRouterWithoutRecord := Router.Group("file")
+	apiRouterApi := v1.ApiGroupApp.FileApiGroup
+	{
+		apiRouterWithoutRecord.POST("upload", apiRouterApi.UploadFile) // 上传文件
 	}
 }
