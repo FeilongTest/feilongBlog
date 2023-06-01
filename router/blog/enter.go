@@ -17,6 +17,7 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList) // 获取分类
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)    //获取文章列表
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)           //获取文章信息
+		apiRouterWithoutRecord.POST("getSummary", articleApi.GetArticleSummary)    //获取分类概述
 	}
 }
 
@@ -33,7 +34,7 @@ func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {
 	apiRouterApi := v1.ApiGroupApp.ArticleApiGroup
 	{
 		apiRouterWithoutRecord.POST("getArticle", apiRouterApi.GetArticle)
-		apiRouterWithoutRecord.GET("getArticleList", apiRouterApi.GetArticleList)
+		apiRouterWithoutRecord.GET("getArticleList", apiRouterApi.GetArticleListAdmin)
 		apiRouterWithoutRecord.POST("createArticle", apiRouterApi.CreateArticle)
 		apiRouterWithoutRecord.DELETE("delArticle", apiRouterApi.DelArticleById)
 		apiRouterWithoutRecord.DELETE("delArticleByIds", apiRouterApi.DelArticleByIds)

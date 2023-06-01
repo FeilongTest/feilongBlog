@@ -37,6 +37,27 @@ func (a *ArticleApi) GetArticleList(c *gin.Context) {
 	return
 }
 
+// GetArticleListAdmin 管理员获取文章列表
+func (a *ArticleApi) GetArticleListAdmin(c *gin.Context) {
+	var pageInfo model.ArticleSearch
+	err := c.ShouldBindQuery(&pageInfo)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if list, total, err := articleApi.GetArticleListAdmin(pageInfo); err != nil {
+		response.FailWithMessage(err.Error(), c)
+	} else {
+		response.OkWithDetailed(response.PageResult{
+			List:     list,
+			Total:    total,
+			Page:     pageInfo.Page,
+			PageSize: pageInfo.PageSize,
+		}, "获取成功", c)
+	}
+	return
+}
+
 // GetArticle 查看文章
 func (a *ArticleApi) GetArticle(c *gin.Context) {
 	var req request.GetById
@@ -138,4 +159,25 @@ func (a *ArticleApi) DelArticleByIds(c *gin.Context) {
 		return
 	}
 	response.OkWithMessage("删除成功", c)
+}
+
+// GetArticleSummary 获取文章分类概况
+func (a *ArticleApi) GetArticleSummary(c *gin.Context) {
+	var req request.GetById
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	err = utils.Verify(req, utils.IdVerify)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	var article any
+	if article, err = articleApi.GetArticleSummary(req.ID); err != nil {
+		response.FailWithMessage(err.Error(), c)
+	} else {
+		response.OkWithDetailed(article, "获取成功", c)
+	}
 }

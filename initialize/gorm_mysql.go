@@ -5,6 +5,7 @@ import (
 	"feilongBlog/initialize/internal"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"time"
 )
 
 // GormMysql 初始化Mysql数据库
@@ -28,6 +29,7 @@ func GormMysql() *gorm.DB {
 		sqlDB, _ := db.DB()
 		sqlDB.SetMaxIdleConns(m.MaxIdleConns)
 		sqlDB.SetMaxOpenConns(m.MaxOpenConns)
+		sqlDB.SetConnMaxLifetime(120 * time.Second)
 		return db
 	}
 }
