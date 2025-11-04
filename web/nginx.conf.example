@@ -1,0 +1,9 @@
+location /blog/ {
+    proxy_pass http://localhost:8889/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+
+location /public/ {
+    proxy_pass http://localhost:8889/;
+}
