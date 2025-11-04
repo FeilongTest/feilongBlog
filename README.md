@@ -1,3 +1,5 @@
+## [预览地址](http://101.201.62.226:8088/)
+
 ## 4.18
 - [x] 按照官方模板Html添加vue的blog Home和blog Content
 - [x] 修复添加的blog页面资源问题,使用getAssetsPath()正确获取图片资源文件
