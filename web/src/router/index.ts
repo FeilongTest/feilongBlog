@@ -76,6 +76,15 @@ const routes: Array<RouteRecordRaw> = [
           breadcrumbs: ["friendlink"],
         },
       },
+      {
+        path: "/admin/account/settings",
+        name: "admin-account-settings",
+        component: () => import("@/views/admin/account/Settings.vue"),
+        meta: {
+          pageTitle: "账户设置",
+          breadcrumbs: ["account", "settings"],
+        },
+      },
     ],
   },
   {

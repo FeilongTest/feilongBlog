@@ -11,16 +11,16 @@
       <div class="menu-content d-flex align-items-center px-3">
         <!--begin::Avatar-->
         <div class="symbol symbol-50px me-5">
-          <img alt="Logo" :src="getAssetPath('/media/avatars/300-1.jpg')" />
+          <img class="account-avatar-50" alt="" :src="avatarUrl" @error="useDefaultAvatar" />
         </div>
         <!--end::Avatar-->
 
         <!--begin::Username-->
         <div class="d-flex flex-column">
           <div class="fw-bold d-flex align-items-center fs-5">
-            飞龙Test
+            {{ displayName }}
           </div>
-          <span class="fw-semobold text-muted fs-7">管理员</span>
+          <span v-if="displayMeta" class="fw-semobold text-muted fs-7 text-truncate">{{ displayMeta }}</span>
         </div>
         <!--end::Username-->
       </div>
@@ -30,6 +30,13 @@
     <!--begin::Menu separator-->
     <div class="separator my-2"></div>
     <!--end::Menu separator-->
+
+    <div v-if="isAuthenticated" class="menu-item px-5">
+      <router-link to="/admin/account/settings" class="menu-link px-5" @click="hideMenu">
+        <span class="menu-icon"><i class="bi bi-shield-lock fs-5"></i></span>
+        <span class="menu-text">账户设置</span>
+      </router-link>
+    </div>
 
     <!--begin::Menu item-->
     <div class="menu-item px-5">
@@ -58,6 +65,28 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const store = useAuthStore();
+    const profile = computed(() => store.user?.user);
+    const publicProfile = computed(() => store.publicProfile);
+    const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
+    const avatarUrl = computed(() => (store.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || defaultAvatar);
+    const displayName = computed(() => store.isAuthenticated
+      ? (profile.value?.truename || profile.value?.userName || "飞龙Test")
+      : (publicProfile.value?.trueName || "飞龙Test"));
+    const displayMeta = computed(() => store.isAuthenticated
+      ? (profile.value?.bio || "Golang Dev")
+      : (publicProfile.value?.bio || "Golang Dev"));
+    const useDefaultAvatar = (event: Event) => {
+      const image = event.currentTarget as HTMLImageElement;
+      if (image.src.endsWith(defaultAvatar)) return;
+      image.src = defaultAvatar;
+    };
+
+    const hideMenu = () => {
+      const menuElement = document.getElementById("kt_user_menu");
+      menuElement?.classList.remove("show");
+      menuElement?.parentElement?.classList.remove("show");
+      MenuComponent.hideDropdowns(undefined);
+    };
 
     // 处理登录/退出
     const handleSignOutOrLogin = (e: Event) => {
@@ -115,6 +144,11 @@ export default defineComponent({
       handleSignOutOrLogin,
       getAssetPath,
       isAuthenticated,
+      hideMenu,
+      avatarUrl,
+      displayName,
+      displayMeta,
+      useDefaultAvatar,
     };
   },
 });
@@ -130,6 +164,16 @@ export default defineComponent({
 .menu-sub {
   position: relative;
   z-index: 1051 !important;
+}
+
+.account-avatar-50 {
+  display: block;
+  width: 50px !important;
+  height: 50px !important;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
 }
 
 /* 移动端特殊处理 */

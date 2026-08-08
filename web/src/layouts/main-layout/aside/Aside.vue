@@ -36,7 +36,7 @@
         <div class="d-flex align-items-center">
           <!--begin::Avatar-->
           <div class="symbol symbol-circle symbol-40px">
-            <img :src="getAssetPath('/media/avatars/300-1.jpg')" alt="photo" />
+            <img class="account-avatar account-avatar-40" :src="avatarUrl" alt="" @error="useDefaultAvatar" />
           </div>
           <!--end::Avatar-->
 
@@ -46,13 +46,13 @@
             <a
               href="#"
               class="text-gray-800 text-hover-primary fs-6 fw-bold lh-1"
-              >飞龙Test</a
+              >{{ displayName }}</a
             >
             <!--end::Name-->
 
             <!--begin::Major-->
-            <span class="text-muted fw-semobold d-block fs-7 lh-1"
-              >Golang Dev</span
+            <span v-if="displayMeta" class="aside-user-meta text-muted fw-semobold d-block fs-7 mt-1"
+              >{{ displayMeta }}</span
             >
             <!--end::Major-->
           </div>
@@ -87,7 +87,7 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent } from "vue";
+import { computed, defineComponent, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useAuthStore } from "@/stores/auth";
 import KTAdminMenu from "@/layouts/main-layout/aside/AdminMenu.vue";
@@ -109,12 +109,35 @@ export default defineComponent({
   setup() {
     const { t } = useI18n();
     const authStore = useAuthStore();
+    const profile = computed(() => authStore.user?.user);
+    const publicProfile = computed(() => authStore.publicProfile);
+    const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
+    const avatarUrl = computed(() => (authStore.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || defaultAvatar);
+    const displayName = computed(() => authStore.isAuthenticated
+      ? (profile.value?.truename || profile.value?.userName || "飞龙Test")
+      : (publicProfile.value?.trueName || "飞龙Test"));
+    const displayMeta = computed(() => authStore.isAuthenticated
+      ? (profile.value?.bio || "Golang Dev")
+      : (publicProfile.value?.bio || "Golang Dev"));
+    const useDefaultAvatar = (event: Event) => {
+      const image = event.currentTarget as HTMLImageElement;
+      if (image.src.endsWith(defaultAvatar)) return;
+      image.src = defaultAvatar;
+    };
+    onMounted(() => {
+      if (authStore.isAuthenticated && !profile.value) authStore.refreshProfile().catch(() => undefined);
+      if (!authStore.isAuthenticated && !publicProfile.value?.bio) authStore.refreshPublicProfile().catch(() => undefined);
+    });
 
     return {
       authStore,
       asideTheme,
       t,
       getAssetPath,
+      avatarUrl,
+      displayName,
+      displayMeta,
+      useDefaultAvatar,
     };
   },
 });
@@ -129,4 +152,6 @@ export default defineComponent({
 }
 
 [data-theme="dark"] .studio-logo { color: #fff; }
+.aside-user-meta { line-height: 1.35; padding-bottom: 1px; }
+.account-avatar-40 { display: block; width: 40px !important; height: 40px !important; max-width: none; object-fit: cover; object-position: center; border-radius: 50%; }
 </style>

@@ -7,7 +7,7 @@
     data-kt-drawer-name="explore"
     data-kt-drawer-activate="true"
     data-kt-drawer-overlay="true"
-    data-kt-drawer-width="{default:'350px', 'lg': '475px'}"
+    data-kt-drawer-width="{default:'calc(100vw - 20px)', 'sm': '350px', 'lg': '475px'}"
     data-kt-drawer-direction="end"
     data-kt-drawer-toggle="#kt_engage_demos_toggle"
     data-kt-drawer-close="#kt_engage_demos_close"
@@ -41,7 +41,7 @@
         <!--begin::Content-->
         <div
           id="kt_explore_scroll"
-          class="scroll-y me-n5 pe-5"
+          class="friend-links-scroll scroll-y me-n5 pe-5"
           data-kt-scroll="true"
           data-kt-scroll-height="auto"
           data-kt-scroll-wrappers="#kt_explore_body"
@@ -56,9 +56,10 @@
                 欢迎交换友情链接！如需添加，请联系我。
               </p>
               <div class="d-flex flex-column gap-2">
-                <a href="mailto:your-email@example.com" class="text-primary fs-7">
-                  <i class="bi bi-envelope fs-6 me-1"></i>联系邮箱
+                <a v-if="contactEmail" :href="`mailto:${contactEmail}`" class="text-primary fs-7 text-break">
+                  <i class="bi bi-envelope fs-6 me-1"></i>{{ contactEmail }}
                 </a>
+                <span v-else class="text-muted fs-7"><i class="bi bi-envelope fs-6 me-1"></i>暂未设置联系邮箱</span>
                 <a href="https://github.com/FeilongTest" target="_blank" class="text-primary fs-7">
                   <i class="bi bi-github fs-6 me-1"></i>GitHub
                 </a>
@@ -83,7 +84,7 @@
               <!--begin::友情链接-->
               <template v-else-if="friendLinks.length > 0">
                 <template v-for="link in friendLinks" :key="link.ID">
-                  <div class="d-flex align-items-center mb-3 p-3 rounded border border-gray-300 hover-elevate-up">
+                  <div class="friend-link-card mb-3 p-3 rounded border border-gray-300 hover-elevate-up">
                     <!--begin::Icon-->
                     <div class="symbol symbol-35px me-3 flex-shrink-0">
                       <img v-if="link.logo" :src="link.logo" :alt="link.name" class="w-100 h-100 rounded" />
@@ -94,7 +95,7 @@
                     <!--end::Icon-->
                     
                     <!--begin::Info-->
-                    <div class="flex-grow-1 min-w-0">
+                    <div class="friend-link-info">
                       <a :href="link.url" target="_blank" class="text-gray-800 text-hover-primary fw-bold fs-7 mb-1 d-block text-truncate">
                         {{ link.name }}
                       </a>
@@ -103,7 +104,7 @@
                     <!--end::Info-->
 
                     <!--begin::Link-->
-                    <a :href="link.url" target="_blank" class="btn btn-xs btn-light-primary flex-shrink-0 ms-2">
+                    <a :href="link.url" target="_blank" class="friend-link-action btn btn-xs btn-light-primary">
                       访问
                     </a>
                     <!--end::Link-->
@@ -153,6 +154,7 @@ export default defineComponent({
   setup() {
     const friendLinks = ref<Friendlink[]>([]);
     const loading = ref(false);
+    const contactEmail = ref("");
 
     // 获取友情链接列表
     const getFriendlinks = async () => {
@@ -169,13 +171,24 @@ export default defineComponent({
       }
     };
 
+    const getContact = async () => {
+      try {
+        const res: any = await service.get("/base/getContact");
+        contactEmail.value = res?.data?.email || "";
+      } catch {
+        contactEmail.value = "";
+      }
+    };
+
     onMounted(() => {
       getFriendlinks();
+      getContact();
     });
 
     return {
       friendLinks,
       loading,
+      contactEmail,
       getAssetPath,
     };
   },
@@ -183,6 +196,31 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.friend-links-scroll {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.friend-link-card {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.friend-link-info {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.friend-link-action {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+
 .hover-elevate-up {
   transition: all 0.2s ease;
 }
@@ -203,5 +241,25 @@ export default defineComponent({
   width: 35px;
   height: 35px;
   min-width: 35px;
+}
+
+@media (max-width: 575.98px) {
+  #kt_explore_body {
+    padding: 1.25rem;
+  }
+
+  .friend-links-scroll {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .friend-link-card {
+    column-gap: 0.625rem;
+  }
+
+  .friend-link-action {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
 }
 </style>

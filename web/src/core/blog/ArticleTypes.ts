@@ -1,6 +1,7 @@
 interface ArticleList {
     ID:number;
     content:string;
+    contentFormat:"html" | "markdown";
     fid:number;
     pic:string;
     title:string;

@@ -11,6 +11,7 @@ type User struct {
 	Ip       string `json:"ip" gorm:"ip;comment:登录ip"`
 	Status   int    `json:"status" gorm:"status;comment:状态"`
 	TrueName string `json:"truename" gorm:"column:truename;comment:真实用户名"`
+	Bio      string `json:"bio" gorm:"type:varchar(120);column:bio;comment:个人简介"`
 	Admin    int    `json:"admin" gorm:"admin;comment:是否管理员"`
 }
 
@@ -29,4 +30,23 @@ type LoginResponse struct {
 	User      User   `json:"user"`
 	Token     string `json:"token"`
 	ExpiresAt int64  `json:"expiresAt"`
+}
+
+type ChangePassword struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+type UpdateProfile struct {
+	TrueName string `json:"trueName"`
+	Email    string `json:"email"`
+	Pic      string `json:"pic"`
+	Bio      string `json:"bio"`
+}
+
+type PublicContact struct {
+	TrueName string `json:"trueName"`
+	Email    string `json:"email"`
+	Pic      string `json:"pic"`
+	Bio      string `json:"bio"`
 }

@@ -18,6 +18,7 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 	var statisticApi = v1.ApiGroupApp.StatisticApiGroup
 	{
 		apiRouterWithoutRecord.POST("login", userRouterApi.Login)                        // 登录
+		apiRouterWithoutRecord.GET("getContact", userRouterApi.GetPublicContact)         // 获取公开联系信息
 		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList)       // 获取分类
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)          //获取文章列表
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)                 //获取文章信息
@@ -32,11 +33,13 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 }
 
 func (s *ApiRouter) InitUserRouter(Router *gin.RouterGroup) {
-	//apiRouterWithoutRecord := Router.Group("user")
-	//apiRouterApi := v1.ApiGroupApp.BlogApiGroup
-	//{
-	//	apiRouterWithoutRecord.POST("getUserList", apiRouterApi.GetUserList) // 创建Api
-	//}
+	userRouter := Router.Group("user")
+	userApi := v1.ApiGroupApp.UserApiGroup
+	{
+		userRouter.GET("profile", userApi.GetProfile)
+		userRouter.PUT("profile", userApi.UpdateProfile)
+		userRouter.PUT("changePassword", userApi.ChangePassword)
+	}
 }
 
 func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {

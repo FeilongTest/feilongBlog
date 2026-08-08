@@ -26,11 +26,13 @@
 - JWT 登录鉴权
 - 文章新增、编辑、隐藏、置顶和删除
 - 按标题、分类和状态筛选文章
-- WangEditor 富文本编辑器
+- WangEditor 富文本与 Vditor Markdown 编辑器
 - 本地或 Cloudflare R2 图片上传
 - 树形分类管理
 - 评论与友情链接管理
 - PV、UV、文章、评论和点赞统计
+- 管理员头像、昵称、简介和联系邮箱设置
+- 管理员登录密码修改
 
 ## 技术栈
 
@@ -38,7 +40,7 @@
 | --- | --- |
 | 前端 | Vue 3、TypeScript、Vite、Pinia、Vue Router |
 | UI | Bootstrap 5、Element Plus、Bootstrap Icons |
-| 编辑器 | WangEditor |
+| 编辑器 | WangEditor、Vditor |
 | 后端 | Go、Gin、GORM、Viper、Zap |
 | 数据库 | MySQL |
 | 文件存储 | 本地存储、Cloudflare R2 |
@@ -91,6 +93,8 @@ CREATE DATABASE blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```bash
 mysql -u root -p blog < blog.sql
 ```
+
+初始化脚本只包含表结构、基础分类、通用友情链接和一个管理员账号，不包含文章、评论或其他站点业务数据。默认管理员账号为 `admin`，密码为 `123456`；首次登录后请立即在“账户设置”中修改密码并完善公开资料。
 
 ### 3. 配置并启动后端
 

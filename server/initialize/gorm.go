@@ -29,5 +29,11 @@ func RegisterTables(db *gorm.DB) {
 		global.BLOG_LOG.Error("register table failed", zap.Error(err))
 		os.Exit(0)
 	}
+	if !db.Migrator().HasColumn(&blog.Article{}, "ContentFormat") {
+		if err = db.Migrator().AddColumn(&blog.Article{}, "ContentFormat"); err != nil {
+			global.BLOG_LOG.Error("add article content format failed", zap.Error(err))
+			os.Exit(0)
+		}
+	}
 	global.BLOG_LOG.Info("register table success")
 }

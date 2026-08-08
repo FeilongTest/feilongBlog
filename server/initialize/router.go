@@ -32,13 +32,13 @@ func Routers() *gin.Engine {
 	}
 	{
 		blogRouter.InitBaseRouter(PublicGroup)    //注册公用路由
-		blogRouter.InitUserRouter(PublicGroup)    //注册用户路由
 		blogRouter.InitArticleRouter(PublicGroup) //注册文章路由
 	}
 
 	PrivateGroup := Router.Group("/admin")
 	PrivateGroup.Use(middleware.JWTAuth()).Use()
 	{
+		blogRouter.InitUserRouter(PrivateGroup)
 		blogRouter.InitFileRouter(PrivateGroup)
 		blogRouter.InitCategoryRouter(PrivateGroup)
 		blogRouter.InitArticleRouter(PrivateGroup)

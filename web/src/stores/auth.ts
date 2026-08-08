@@ -19,7 +19,15 @@ export interface User {
   ip:string;
   status:number;
   truename:string;
+  bio:string;
   admin:number;
+}
+
+export interface PublicProfile {
+  trueName:string;
+  email:string;
+  pic:string;
+  bio:string;
 }
 
 
@@ -27,6 +35,7 @@ export const useAuthStore = defineStore("auth", () => {
   const errors = ref({});
   const user = ref<UserData>({} as UserData);
   const isAuthenticated = ref(JwtService.isTokenValid());
+  const publicProfile = ref<PublicProfile>({} as PublicProfile);
 
   function setAuth(authUser: UserData) {
     isAuthenticated.value = true;
@@ -64,6 +73,24 @@ export const useAuthStore = defineStore("auth", () => {
     purgeAuth();
   }
 
+  function updateProfile(profile: User) {
+    if (user.value?.user) user.value.user = profile;
+    else user.value = { token: JwtService.getToken() || "", expiresAt: 0, user: profile };
+  }
+
+  async function refreshProfile() {
+    if (!isAuthenticated.value) return undefined;
+    const { data } = await service.get("/admin/user/profile");
+    updateProfile(data);
+    return data as User;
+  }
+
+  async function refreshPublicProfile() {
+    const { data } = await service.get("/base/getContact");
+    publicProfile.value = data || {};
+    return publicProfile.value;
+  }
+
   function verifyAuth() {
 	  isAuthenticated.value = JwtService.isTokenValid();
 	  if (!isAuthenticated.value) JwtService.destroyToken();
@@ -72,9 +99,13 @@ export const useAuthStore = defineStore("auth", () => {
   return {
     errors,
     user,
+    publicProfile,
     isAuthenticated,
     login,
     logout,
+    updateProfile,
+    refreshProfile,
+    refreshPublicProfile,
     verifyAuth,
   };
 });

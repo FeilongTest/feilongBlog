@@ -3,7 +3,7 @@
   <div class="d-flex align-items-stretch flex-shrink-0">
     <div class="topbar d-flex align-items-stretch flex-shrink-0">
       <!--begin::Search-->
-      <div class="d-flex align-items-stretch ms-1 ms-lg-3">
+      <div class="d-flex align-items-center ms-1 ms-lg-3">
         <KTSearch></KTSearch>
       </div>
       <!--end::Search-->

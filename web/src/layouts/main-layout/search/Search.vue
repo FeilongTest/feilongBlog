@@ -13,13 +13,18 @@
       >
         <!--begin::Search toggle-->
         <div class="d-flex align-items-center" id="kt_header_search_toggle">
-          <div class="btn btn-icon btn-active-light-primary">
+          <button
+            type="button"
+            class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline w-40px h-40px"
+            aria-label="搜索文章"
+            title="搜索文章"
+          >
             <span class="svg-icon svg-icon-1">
               <inline-svg
                 :src="getAssetPath('/media/icons/duotune/general/gen021.svg')"
               />
             </span>
-          </div>
+          </button>
         </div>
         <!--end::Search toggle-->
       </div>

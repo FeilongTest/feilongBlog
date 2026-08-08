@@ -95,12 +95,33 @@
             <!--end::Input group-->
 
 
-            <div class="editor—wrapper">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <label class="fs-5 fw-semobold mb-0">内容格式</label>
+              <div class="btn-group" role="group" aria-label="内容格式">
+                <button
+                  type="button"
+                  :class="['btn btn-sm', articleInfo.contentFormat === 'html' ? 'btn-primary' : 'btn-light-primary']"
+                  @click="articleInfo.contentFormat = 'html'"
+                >
+                  富文本
+                </button>
+                <button
+                  type="button"
+                  :class="['btn btn-sm', articleInfo.contentFormat === 'markdown' ? 'btn-primary' : 'btn-light-primary']"
+                  @click="articleInfo.contentFormat = 'markdown'"
+                >
+                  Markdown
+                </button>
+              </div>
+            </div>
+
+            <div v-if="articleInfo.contentFormat !== 'markdown'" class="editor—wrapper">
               <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig"
                 :mode="mode" />
               <Editor style="height: 500px; overflow-y: hidden;" v-model="valueHtml" :defaultConfig="editorConfig"
                 :mode="mode" @onCreated="handleCreated" />
             </div>
+            <MarkdownEditor v-else v-model="markdownValue" />
           </VForm>
 
         </div>
@@ -190,6 +211,7 @@ import '@wangeditor/editor/dist/css/style.css' // 引入 css
 import { defineComponent,onBeforeUnmount, ref, shallowRef, onMounted,watch } from 'vue'
 import { getAssetPath } from "@/core/helpers/assets";
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
+import MarkdownEditor from '@/components/admin/MarkdownEditor.vue'
 import { ErrorMessage, Field, Form as VForm } from "vee-validate";
 import service from '@/utils/request';
 import JwtService from "@/core/services/JwtService";
@@ -205,6 +227,7 @@ export default defineComponent({
   components: {
     Editor,
     Toolbar,
+    MarkdownEditor,
     ErrorMessage,
     Field,
     VForm,
@@ -234,6 +257,7 @@ export default defineComponent({
 
     // 内容 HTML
     const valueHtml = ref('')
+    const markdownValue = ref('')
 
 
     const router = useRouter();
@@ -247,8 +271,8 @@ export default defineComponent({
           articleMode.value = "更新"
           getArticle(Number(currentRoute.params.id));
       }else{
-        articleInfo.value.fid = 34
         articleInfo.value.type = 1
+        articleInfo.value.contentFormat = 'html'
       }
     
       //获取分类列表
@@ -321,7 +345,7 @@ export default defineComponent({
       }
       postData = {
         ...articleInfo.value,
-        content:valueHtml.value,
+        content:articleInfo.value.contentFormat === 'markdown' ? markdownValue.value : valueHtml.value,
         pic:Number(articleInfo.value.type) === 0 ? "" : data.value.imgStr
       }
       if(articleMode.value == "新增"){
@@ -378,6 +402,11 @@ export default defineComponent({
       service.get("/base/getCategoryList")
         .then(res => {
           category.value = res.data
+          if (articleMode.value === "新增" && !articleInfo.value.fid) {
+            const firstCategory = category.value.find(item => item.fid !== 0)
+              || category.value.find(item => item.fid === 0)
+            articleInfo.value.fid = firstCategory?.ID || 0
+          }
         })
     }
 
@@ -385,7 +414,12 @@ export default defineComponent({
       service.post("/admin/article/getArticle",{id:id})
         .then(res => {
           articleInfo.value = res.data
-          valueHtml.value = articleInfo.value.content
+          articleInfo.value.contentFormat = articleInfo.value.contentFormat || 'html'
+          if (articleInfo.value.contentFormat === 'markdown') {
+            markdownValue.value = articleInfo.value.content
+          } else {
+            valueHtml.value = articleInfo.value.content
+          }
           data.value.img = articleInfo.value.pic
           data.value.imgStr = articleInfo.value.pic
         })
@@ -416,6 +450,7 @@ export default defineComponent({
       getAssetPath,
       editorRef,
       valueHtml,
+      markdownValue,
       mode: 'default', // 或 'simple'
       toolbarConfig,
       editorConfig,
