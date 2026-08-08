@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -77,11 +78,20 @@ func (*Local) UploadFile(file *multipart.FileHeader) (string, string, error) {
 //@return: error
 
 func (*Local) DeleteFile(key string) error {
-	p := global.BLOG_CONFIG.Local.StorePath + "/" + key
-	if strings.Contains(p, global.BLOG_CONFIG.Local.StorePath) {
-		if err := os.Remove(p); err != nil {
-			return errors.New("本地文件删除失败, err:" + err.Error())
-		}
+	root, err := filepath.Abs(global.BLOG_CONFIG.Local.StorePath)
+	if err != nil {
+		return err
+	}
+	target, err := filepath.Abs(filepath.Join(root, filepath.Clean(key)))
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(root, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return errors.New("本地文件路径不合法")
+	}
+	if err := os.Remove(target); err != nil {
+		return errors.New("本地文件删除失败, err:" + err.Error())
 	}
 	return nil
 }

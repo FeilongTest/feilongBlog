@@ -142,7 +142,7 @@ import { defineComponent, ref, onMounted } from "vue";
 import service from "@/utils/request";
 import type { Comment } from "@/core/blog/CommentTypes";
 import { ElMessage, ElMessageBox } from "element-plus";
-import moment from "moment";
+import dayjs from "dayjs";
 import { getAssetPath } from "@/core/helpers/assets";
 import Swal from "sweetalert2";
 
@@ -223,7 +223,7 @@ export default defineComponent({
 
     // 格式化日期
     const formatDate = (timestamp: number): string => {
-      return moment.unix(timestamp).format("YYYY-MM-DD HH:mm:ss");
+      return dayjs.unix(timestamp).format("YYYY-MM-DD HH:mm:ss");
     };
 
     // 分页变化

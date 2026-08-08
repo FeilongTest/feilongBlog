@@ -11,7 +11,7 @@
     >
       <!--begin::Copyright-->
       <div class="text-dark order-2 order-md-1">
-        <span class="text-muted fw-semobold me-1">2025&copy;</span>
+        <span class="text-muted fw-semobold me-1">2026&copy;</span>
         <a
           href="https://github.com/FeilongTest"
           target="_blank"

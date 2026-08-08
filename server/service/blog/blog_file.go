@@ -12,10 +12,7 @@ type FileService struct{}
 
 func (e *FileService) UploadFile(header *multipart.FileHeader) (filePath, key string, err error) {
 	oss := file.NewOss()
-	filePath, key, uploadErr := oss.UploadFile(header)
-	if uploadErr != nil {
-		panic(err)
-	}
+	filePath, key, err = oss.UploadFile(header)
 	return
 }
 

@@ -1,0 +1,58 @@
+local:
+  path: uploads/file
+  store-path: uploads/file
+
+mysql:
+  path: 127.0.0.1
+  port: "3306"
+  config: charset=utf8mb4&parseTime=True&loc=Local
+  db-name: blog
+  username: blog
+  password: replace-with-your-database-password
+  prefix: ""
+  singular: true
+  engine: InnoDB
+  max-idle-conns: 10
+  max-open-conns: 100
+  log-mode: warn
+  log-zap: false
+
+system:
+  env: public
+  addr: 8889
+  oss-type: local
+  use-multipoint: false
+
+zap:
+  level: info
+  prefix: "[blog]"
+  format: json
+  director: log
+  encode-level: LowercaseLevelEncoder
+  stacktrace-key: stacktrace
+  max-age: 30
+  show-line: true
+  log-in-console: true
+
+cors:
+  mode: whitelist
+  whitelist:
+    - allow-origin: http://localhost:5173
+      allow-methods: POST, GET, OPTIONS, PUT, DELETE
+      allow-headers: Content-Type, AccessToken, X-CSRF-Token, Authorization, Token
+      expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type
+      allow-credentials: true
+
+jwt:
+  signing-key: replace-with-a-random-string-at-least-32-characters
+  expires-time: 24h
+  buffer-time: 2h
+  issuer: blog
+
+r2:
+  account-id: ""
+  access-key-id: ""
+  secret-access-key: ""
+  bucket: ""
+  public-url: ""
+  max-size-mb: 10

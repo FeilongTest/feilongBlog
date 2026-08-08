@@ -1,276 +1,115 @@
 <template>
-  <div
-    class="modal fade"
-    id="kt_modal_category"
-    ref="categoryModalRef"
-    tabindex="-1"
-    aria-hidden="true"
-  >
-    <!--begin::Modal dialog-->
-    <div class="modal-dialog modal-dialog-centered mw-650px">
-      <!--begin::Modal content-->
-      <div class="modal-content">
-        <!--begin::Modal header-->
-        <div class="modal-header" id="kt_modal_category_header">
-          <!--begin::Modal title-->
-          <h2 class="fw-bold">{{ getModalTitle() }}分类</h2>
-          <!--end::Modal title-->
-
-          <!--begin::Close-->
-          <div
-            id="kt_modal_category_close"
-            data-bs-dismiss="modal"
-            class="btn btn-icon btn-sm btn-active-icon-primary"
-          >
-            <span class="svg-icon svg-icon-1">
-              <inline-svg
-                :src="getAssetPath('/media/icons/duotune/arrows/arr061.svg')"
-              />
-            </span>
-          </div>
-          <!--end::Close-->
-        </div>
-        <!--end::Modal header-->
-        <!--begin::Form-->
-        <el-form
-          @submit.prevent="submit()"
-          :model="formData"
-          :rules="rules"
-          ref="formRef"
-        >
-          <!--begin::Modal body-->
-          <div class="modal-body py-10 px-lg-17">
-            <!--begin::Scroll-->
-            <div
-              class="scroll-y me-n7 pe-7"
-              id="kt_modal_category_scroll"
-              data-kt-scroll="true"
-              data-kt-scroll-activate="{default: false, lg: true}"
-              data-kt-scroll-max-height="auto"
-              data-kt-scroll-dependencies="#kt_modal_category_header"
-              data-kt-scroll-wrappers="#kt_modal_category_scroll"
-              data-kt-scroll-offset="300px"
-            >
-              <!--begin::Input group-->
-              <div class="fv-row mb-7">
-                <!--begin::Label-->
-                <label class="required fs-6 fw-semobold mb-2">分类名称</label>
-                <!--end::Label-->
-
-                <!--begin::Input-->
-                <el-form-item prop="name">
-                  <el-input
-                    v-model="formData.name"
-                    type="text"
-                    placeholder="请输入分类"
-                  />
-                </el-form-item>
-                <!--end::Input-->
-              </div>
-              <!--end::Input group-->
-
-              <!--begin::Input group-->
-              <div class="fv-row mb-7">
-                <!--begin::Label-->
-                <label class="fs-6 fw-semobold mb-2">
-                  <span class="required">上级分类</span>
-
-                  <i
-                    class="fas fa-exclamation-circle ms-1 fs-7"
-                    data-bs-toggle="tooltip"
-                    title="Email address must be active"
-                  ></i>
-                </label>
-                <!--end::Label-->
-
-                <!--begin::Input-->
-                <el-form-item prop="fid">
-                  <el-select style="width: 100%;" v-model="formData.ID">
-                    <el-option :value="0" label="根目录" />
-                    <template v-for="item in data">
-                      <el-option v-if="item.fid == 0" :value="item.ID" :label="item.name" />
-                    </template>
-                    
-
-                  </el-select>
-                </el-form-item>
-                <!--end::Input-->
-              </div>
-              <!--end::Input group-->
-
-              <!--begin::Input group-->
-              <div class="fv-row mb-15">
-                <!--begin::Label-->
-                <label class="fs-6 fw-semobold mb-2">分类权重</label>
-                <!--end::Label-->
-
-                <!--begin::Input-->
-                <el-form-item prop="description">
-                  <el-input v-model="formData.sort" type="text" />
-                </el-form-item>
-                <!--end::Input-->
-              </div>
-              <!--end::Input group-->
-
+  <div id="kt_modal_category" ref="categoryModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-600px">
+      <div class="modal-content border-0 overflow-hidden">
+        <div class="modal-header border-0 px-8 pt-8 pb-3">
+          <div class="d-flex align-items-center">
+            <span class="modal-heading-icon me-4"><i :class="mode === 'add' ? 'bi bi-folder-plus' : 'bi bi-pencil-square'"></i></span>
+            <div>
+              <h2 class="fw-bolder text-gray-900 mb-1">{{ mode === 'add' ? '新建分类' : '编辑分类' }}</h2>
+              <span class="text-muted fs-7">设置名称、所属层级与展示权重</span>
             </div>
-            <!--end::Scroll-->
           </div>
-          <!--end::Modal body-->
+          <button type="button" class="btn btn-sm btn-icon btn-light" data-bs-dismiss="modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>
+        </div>
 
-          <!--begin::Modal footer-->
-          <div class="modal-footer flex-center">
-            <!--begin::Button-->
-            <button
-              type="reset"
-              id="kt_modal_category_cancel"
-              class="btn btn-light me-3"
-            >
-              重置
-            </button>
-            <!--end::Button-->
+        <el-form ref="formRef" :model="formData" :rules="rules" label-position="top" @submit.prevent="submit">
+          <div class="modal-body px-8 py-6">
+            <el-form-item label="分类名称" prop="name">
+              <el-input v-model.trim="formData.name" size="large" maxlength="30" show-word-limit placeholder="例如：技术随笔" />
+            </el-form-item>
 
-            <!--begin::Button-->
-            <button
-              :data-kt-indicator="loading ? 'on' : null"
-              class="btn btn-lg btn-primary"
-              type="submit"
-            >
-              <span v-if="!loading" class="indicator-label">
-                提交
-                <span class="svg-icon svg-icon-3 ms-2 me-0">
-                  <inline-svg
-                    :src="
-                      getAssetPath('/media/icons/duotune/arrows/arr064.svg')
-                    "
-                  />
-                </span>
-              </span>
-              <span v-if="loading" class="indicator-progress">
-                Please wait...
-                <span
-                  class="spinner-border spinner-border-sm align-middle ms-2"
-                ></span>
-              </span>
-            </button>
-            <!--end::Button-->
+            <el-form-item label="上级分类" prop="fid">
+              <el-select v-model="formData.fid" size="large" class="w-100" placeholder="请选择所属层级">
+                <el-option :value="0" label="设为一级分类" />
+                <el-option v-for="item in parentOptions" :key="item.ID" :value="item.ID" :label="item.name" />
+              </el-select>
+              <div class="form-hint"><i class="bi bi-info-circle me-2"></i>选择一级分类后，当前分类会显示在它的下方。</div>
+            </el-form-item>
+
+            <el-form-item label="展示权重" prop="sort" class="mb-2">
+              <el-input-number v-model="formData.sort" :min="0" :max="9999" controls-position="right" class="w-100" size="large" />
+              <div class="form-hint"><i class="bi bi-sort-down me-2"></i>数字越大，分类在同级列表中的位置越靠前。</div>
+            </el-form-item>
           </div>
-          <!--end::Modal footer-->
+
+          <div class="modal-footer border-0 bg-light px-8 py-5">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary px-6" :disabled="loading">
+              <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+              {{ loading ? '正在保存' : '保存分类' }}
+            </button>
+          </div>
         </el-form>
-        <!--end::Form-->
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, ref } from "vue";
+import { computed, defineComponent, nextTick, ref, watch } from "vue";
+import type { FormInstance, FormRules } from "element-plus";
+import { ElNotification } from "element-plus";
 import { hideModal } from "@/core/helpers/dom";
-import Swal from "sweetalert2";
 import type { CategoryList } from "@/core/blog/CategoryTypes";
-import { watch } from "vue"; 
+import service from "@/utils/request";
 
 export default defineComponent({
   name: "category-modal",
-  components: {},
   props: {
-    id:Number,
-    mode:String,
-    data:Array<CategoryList>,
+    id: { type: Number, default: 0 },
+    parentId: { type: Number, default: 0 },
+    mode: { type: String, default: "add" },
+    data: { type: Array<CategoryList>, default: () => [] },
   },
-  setup(props) {
-    const formRef = ref<null | HTMLFormElement>(null);
-    const categoryModalRef = ref<null | HTMLElement>(null);
-    const loading = ref<boolean>(false);
-    const formData = ref({
-      ID: 0,
-      name: "",
-      sort: 0,
-    });
-  
-    watch(
-      () => props.id,
-      (newValue: any) => {
-        props.data?.forEach(element => {
-          if(props.id == element.ID){
-            formData.value.ID = element.fid;
-            formData.value.name = element.name;
-            formData.value.sort = element.sort;
-          }else if(props.id == 0){
-            formData.value.ID = 0;
-            formData.value.name = "";
-            formData.value.sort = 0;
-          }
-        });
-      },
-    )
+  emits: ["saved"],
+  setup(props, { emit }) {
+    const formRef = ref<FormInstance>();
+    const categoryModalRef = ref<HTMLElement | null>(null);
+    const loading = ref(false);
+    const formData = ref({ ID: 0, name: "", fid: 0, sort: 0, type: 0 });
 
+    const parentOptions = computed(() => props.data.filter(item => item.fid === 0 && item.ID !== props.id));
+    const rules: FormRules = {
+      name: [{ required: true, message: "请输入分类名称", trigger: "blur" }],
+      fid: [{ required: true, message: "请选择上级分类", trigger: "change" }],
+    };
 
-    const rules = ref({
-      name: [
-        {
-          required: true,
-          message: "必须输入分类名称",
-          trigger: "change",
-        },
-      ],
-    });
+    const syncForm = () => {
+      const current = props.data.find(item => item.ID === props.id);
+      formData.value = current && props.mode === "modify"
+        ? { ID: current.ID, name: current.name, fid: current.fid, sort: current.sort, type: current.type }
+        : { ID: 0, name: "", fid: props.parentId, sort: 0, type: 0 };
+      nextTick(() => formRef.value?.clearValidate());
+    };
+    watch(() => [props.id, props.mode, props.parentId, props.data], syncForm, { deep: true, immediate: true });
 
-    const getModalTitle = () => {
-      return props.mode == "add" ? "新增" : "修改"
-    }
-
-    const submit = () => {
-      if (!formRef.value) {
-        return;
-      }
-
-      formRef.value.validate((valid: boolean) => {
-        if (valid) {
-          loading.value = true;
-
-          setTimeout(() => {
-            loading.value = false;
-
-            Swal.fire({
-              text: "Form has been successfully submitted!",
-              icon: "success",
-              buttonsStyling: false,
-              confirmButtonText: "Ok, got it!",
-              heightAuto: false,
-              customClass: {
-                confirmButton: "btn btn-primary",
-              },
-            }).then(() => {
-              hideModal(categoryModalRef.value);
-            });
-          }, 2000);
+    const submit = async () => {
+      if (!formRef.value || !(await formRef.value.validate().catch(() => false))) return;
+      loading.value = true;
+      try {
+        if (props.mode === "add") {
+          await service.post("/admin/category/createCategory", formData.value);
         } else {
-          Swal.fire({
-            text: "Sorry, looks like there are some errors detected, please try again.",
-            icon: "error",
-            buttonsStyling: false,
-            confirmButtonText: "Ok, got it!",
-            heightAuto: false,
-            customClass: {
-              confirmButton: "btn btn-primary",
-            },
-          });
-          return false;
+          await service.put("/admin/category/updateCategory", formData.value);
         }
-      });
+        ElNotification({ title: "保存成功", message: `分类“${formData.value.name}”已更新`, type: "success" });
+        hideModal(categoryModalRef.value);
+        emit("saved");
+      } finally {
+        loading.value = false;
+      }
     };
 
-    return {
-      getModalTitle,
-      formData,
-      rules,
-      submit,
-      formRef,
-      loading,
-      categoryModalRef,
-      getAssetPath,
-    };
+    return { formRef, categoryModalRef, loading, formData, parentOptions, rules, submit };
   },
 });
 </script>
+
+<style lang="scss" scoped>
+.modal-content { border-radius: 18px; box-shadow: 0 24px 70px rgba(26, 35, 62, .18); }
+.modal-heading-icon { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; color: var(--kt-primary); background: var(--kt-primary-light); font-size: 1.25rem; }
+.form-hint { width: 100%; margin-top: 8px; color: var(--kt-gray-500); font-size: .82rem; }
+:deep(.el-form-item__label) { color: var(--kt-gray-800); font-weight: 700; font-size: .95rem; }
+:deep(.el-input__wrapper), :deep(.el-select__wrapper) { border-radius: 10px; box-shadow: 0 0 0 1px var(--kt-gray-300) inset; }
+</style>

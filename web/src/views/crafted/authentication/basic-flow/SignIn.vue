@@ -1,193 +1,109 @@
 <template>
-  <!--begin::Wrapper-->
-  <div class="w-lg-500px p-10">
-    <!--begin::Form-->
+  <div class="login-panel">
+    <div class="mb-10">
+      <span class="login-kicker">ADMIN CONSOLE</span>
+      <h2 class="login-title">欢迎回来</h2>
+      <p class="login-subtitle">登录后管理你的博客内容与站点数据。</p>
+    </div>
+
     <VForm
-      class="form w-100"
       id="kt_login_signin_form"
-      @submit="onSubmitLogin"
+      class="form w-100"
       :validation-schema="login"
-      :initial-values="{ username: 'admin', password: '123456' }"
+      :initial-values="{ username: '', password: '' }"
+      @submit="onSubmitLogin"
     >
-      <!--begin::Heading-->
-      <div class="text-center mb-10">
-        <!--begin::Title-->
-        <h1 class="text-dark mb-3">登录</h1>
-        <!--end::Title-->
-      </div>
-      <!--begin::Heading-->
-
-      <!--begin::Input group-->
-      <div class="fv-row mb-10">
-        <!--begin::Label-->
-        <label class="form-label fs-6 fw-bold text-dark">用户名</label>
-        <!--end::Label-->
-
-        <!--begin::Input-->
+      <div class="fv-row mb-7">
+        <label class="form-label fs-6 fw-semibold text-gray-800">用户名</label>
         <Field
-          tabindex="1"
-          class="form-control form-control-lg form-control-solid"
+          class="form-control form-control-lg form-control-solid login-input"
           type="text"
           name="username"
-          autocomplete="off"
+          autocomplete="username"
+          placeholder="请输入用户名"
         />
-        <!--end::Input-->
-        <div class="fv-plugins-message-container">
-          <div class="fv-help-block">
-            <ErrorMessage name="username" />
-          </div>
-        </div>
+        <div class="fv-plugins-message-container"><div class="fv-help-block"><ErrorMessage name="username" /></div></div>
       </div>
-      <!--end::Input group-->
 
-      <!--begin::Input group-->
-      <div class="fv-row mb-10">
-        <!--begin::Wrapper-->
-        <div class="d-flex flex-stack mb-2">
-          <!--begin::Label-->
-          <label class="form-label fw-bold text-dark fs-6 mb-0">密码</label>
-          <!--end::Label-->
-
-          <!--begin::Link-->
-          <router-link to="/password-reset" class="link-primary fs-6 fw-bold">
-            忘记密码？
-          </router-link>
-          <!--end::Link-->
-        </div>
-        <!--end::Wrapper-->
-
-        <!--begin::Input-->
+      <div class="fv-row mb-8">
+        <label class="form-label fs-6 fw-semibold text-gray-800">密码</label>
         <Field
-          tabindex="2"
-          class="form-control form-control-lg form-control-solid"
+          class="form-control form-control-lg form-control-solid login-input"
           type="password"
           name="password"
-          autocomplete="off"
+          autocomplete="current-password"
+          placeholder="请输入密码"
         />
-        <!--end::Input-->
-        <div class="fv-plugins-message-container">
-          <div class="fv-help-block">
-            <ErrorMessage name="password" />
-          </div>
-        </div>
+        <div class="fv-plugins-message-container"><div class="fv-help-block"><ErrorMessage name="password" /></div></div>
       </div>
-      <!--end::Input group-->
 
-      <!--begin::Actions-->
-      <div class="text-center">
-        <!--begin::Submit button-->
-        <button
-          tabindex="3"
-          type="submit"
-          ref="submitButton"
-          id="kt_sign_in_submit"
-          class="btn btn-lg btn-primary w-100 mb-5"
-        >
-          <span class="indicator-label"> 登录 </span>
+      <button ref="submitButton" id="kt_sign_in_submit" type="submit" class="btn btn-lg btn-primary w-100 login-submit">
+        <span class="indicator-label">登录后台 <i class="bi bi-arrow-right ms-2"></i></span>
+        <span class="indicator-progress">正在登录… <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+      </button>
 
-          <span class="indicator-progress">
-            正在登录...
-            <span
-              class="spinner-border spinner-border-sm align-middle ms-2"
-            ></span>
-          </span>
-        </button>
-        <!--end::Submit button-->
-
-      </div>
-      <!--end::Actions-->
+      <router-link :to="{ name: 'blog-home' }" class="back-home"><i class="bi bi-arrow-left"></i> 返回博客首页</router-link>
     </VForm>
-    <!--end::Form-->
   </div>
-  <!--end::Wrapper-->
 </template>
 
-<script lang="ts">
-import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, ref } from "vue";
+<script setup lang="ts">
+import { ref } from "vue";
 import { ErrorMessage, Field, Form as VForm } from "vee-validate";
-import { useAuthStore, type User } from "@/stores/auth";
 import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import * as Yup from "yup";
+import { useAuthStore, type User } from "@/stores/auth";
 
-export default defineComponent({
-  name: "sign-in",
-  components: {
-    Field,
-    VForm,
-    ErrorMessage,
-  },
-  setup() {
-    const store = useAuthStore();
-    const router = useRouter();
+const authStore = useAuthStore();
+const router = useRouter();
+const submitButton = ref<HTMLButtonElement | null>(null);
 
-    const submitButton = ref<HTMLButtonElement | null>(null);
-
-    //Create form validation object
-    const login = Yup.object().shape({
-      username: Yup.string().required().label("Username"),
-      password: Yup.string().min(4).required().label("Password"),
-    });
-
-    //Form submit function
-    const onSubmitLogin = async (values: any) => {
-      values = values as User;
-      // Clear existing errors
-      store.logout();
-
-      if (submitButton.value) {
-        // eslint-disable-next-line
-        submitButton.value!.disabled = true;
-        // Activate indicator
-        submitButton.value.setAttribute("data-kt-indicator", "on");
-      }
-
-      // Send login request
-      await store.login(values);
-      const error = Object.values(store.errors);
-
-      if (error.length === 0) {
-        Swal.fire({
-          text: "登录成功！",
-          icon: "success",
-          buttonsStyling: false,
-          confirmButtonText: "确定",
-          heightAuto: false,
-          customClass: {
-            confirmButton: "btn fw-semobold btn-light-primary",
-          },
-        }).then(() => {
-          // Go to page after successfully login
-          router.push({ name: "dashboard" });
-        });
-      } else {
-        Swal.fire({
-          text: error[0] as string,
-          icon: "error",
-          buttonsStyling: false,
-          confirmButtonText: "重试",
-          heightAuto: false,
-          customClass: {
-            confirmButton: "btn fw-semobold btn-light-danger",
-          },
-        }).then(() => {
-          store.errors = {};
-        });
-      }
-
-      //Deactivate indicator
-      submitButton.value?.removeAttribute("data-kt-indicator");
-      // eslint-disable-next-line
-        submitButton.value!.disabled = false;
-    };
-
-    return {
-      onSubmitLogin,
-      login,
-      submitButton,
-      getAssetPath,
-    };
-  },
+const login = Yup.object({
+  username: Yup.string().required("请输入用户名"),
+  password: Yup.string().min(4, "密码至少需要 4 位").required("请输入密码"),
 });
+
+const onSubmitLogin = async (values: Record<string, unknown>) => {
+  authStore.logout();
+  if (submitButton.value) {
+    submitButton.value.disabled = true;
+    submitButton.value.setAttribute("data-kt-indicator", "on");
+  }
+
+  try {
+    await authStore.login(values as unknown as User);
+    const error = Object.values(authStore.errors)[0];
+    if (error) {
+      await Swal.fire({
+        text: String(error), icon: "error", buttonsStyling: false, confirmButtonText: "重试", heightAuto: false,
+        customClass: { confirmButton: "btn fw-semibold btn-light-danger" },
+      });
+      authStore.errors = {};
+      return;
+    }
+
+    await Swal.fire({
+      text: "登录成功", icon: "success", buttonsStyling: false, confirmButtonText: "进入后台", heightAuto: false,
+      customClass: { confirmButton: "btn fw-semibold btn-light-primary" },
+    });
+    const redirect = router.currentRoute.value.query.redirect;
+    await router.push(typeof redirect === "string" && redirect.startsWith("/") ? redirect : { name: "dashboard" });
+  } finally {
+    submitButton.value?.removeAttribute("data-kt-indicator");
+    if (submitButton.value) submitButton.value.disabled = false;
+  }
+};
 </script>
+
+<style scoped>
+.login-panel { width: min(100%, 430px); padding: 2rem 0; }
+.login-kicker { color: var(--kt-primary); font-size: .75rem; font-weight: 700; letter-spacing: .18em; }
+.login-title { margin: 1rem 0 .65rem; color: #181c32; font-size: clamp(2rem, 4vw, 2.65rem); font-weight: 750; letter-spacing: -.04em; }
+.login-subtitle { margin: 0; color: #7e8299; font-size: 1rem; }
+.login-input { min-height: 54px; border: 1px solid transparent; border-radius: .75rem; transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
+.login-input:focus { border-color: rgba(0, 158, 247, .4); background: #fff; box-shadow: 0 0 0 .25rem rgba(0, 158, 247, .08); }
+.login-submit { min-height: 52px; border-radius: .75rem; font-weight: 650; box-shadow: 0 .75rem 1.75rem rgba(0, 158, 247, .18); }
+.back-home { display: flex; justify-content: center; align-items: center; gap: .5rem; margin-top: 1.5rem; color: #7e8299; font-size: .9rem; font-weight: 600; }
+.back-home:hover { color: var(--kt-primary); }
+</style>

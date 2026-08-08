@@ -57,6 +57,9 @@ func (j *JWT) CreateTokenByOldToken(oldToken string, claims model.CustomClaims) 
 // ParseToken 解析 token
 func (j *JWT) ParseToken(tokenString string) (*model.CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &model.CustomClaims{}, func(token *jwt.Token) (i interface{}, e error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, TokenInvalid
+		}
 		return j.SigningKey, nil
 	})
 	if err != nil {

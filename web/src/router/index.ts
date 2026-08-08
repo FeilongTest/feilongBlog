@@ -162,34 +162,29 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore();
   const configStore = useConfigStore();
 
   // 更新认证状态（基于token是否存在）
-  const token = JwtService.getToken();
-  if (token) {
-    authStore.isAuthenticated = true;
-  } else {
-    authStore.isAuthenticated = false;
-  }
+	const authenticated = JwtService.isTokenValid();
+	authStore.isAuthenticated = authenticated;
+	if (!authenticated) JwtService.destroyToken();
 
   // 如果访问根路径"/"，根据登录状态重定向
   if (to.path === "/") {
     if (authStore.isAuthenticated) {
       // 已登录，跳转到后台
-      next({ name: "dashboard" });
-      return;
+      return { name: "dashboard" };
     } else {
       // 未登录，跳转到前台首页
-      next({ name: "blog-home" });
-      return;
+      return { name: "blog-home" };
     }
   }
 
   // current page view title
   const appName = import.meta.env.VITE_APP_NAME || "Feilong'S Blog";
-  document.title = `${to.meta.pageTitle} - ${appName}`;
+	document.title = to.meta.pageTitle ? `${to.meta.pageTitle} - ${appName}` : appName;
 
   // reset config to initial state
   configStore.resetLayoutConfig();
@@ -197,17 +192,9 @@ router.beforeEach((to, from, next) => {
   // before page access check if page requires authentication
   if (to.meta.middleware == "auth") {
     // verify auth token before each page change
-    authStore.verifyAuth();
-    //需要鉴权的路由
-    if (authStore.isAuthenticated) {
-      next();
-    } else {
-      // 未登录时跳转到登录页
-      next({ name: "sign-in" });
-    }
-  } else {
-    // 如果已登录且访问前台页面，可以允许访问（用户可能想查看前台）
-    next();
+	if (!authStore.isAuthenticated) {
+	  return { name: "sign-in", query: { redirect: to.fullPath } };
+	}
   }
 
   // Scroll page to top on every route change
@@ -216,6 +203,7 @@ router.beforeEach((to, from, next) => {
     left: 0,
     behavior: "smooth",
   });
+	return true;
 });
 
 export default router;

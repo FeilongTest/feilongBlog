@@ -9,6 +9,7 @@ type ApiGroup struct {
 	FileApiGroup       blog.FileApi
 	CommentApiGroup    blog.CommentApi
 	FriendlinkApiGroup blog.FriendlinkApi
+	StatisticApiGroup  blog.StatisticApi
 }
 
 var ApiGroupApp = new(ApiGroup)

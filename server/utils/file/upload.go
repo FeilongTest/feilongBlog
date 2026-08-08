@@ -18,6 +18,8 @@ type OSS interface {
 // Author [ccfish86](https://github.com/ccfish86)
 func NewOss() OSS {
 	switch global.BLOG_CONFIG.System.OssType {
+	case "r2":
+		return NewR2()
 	case "local":
 		return &Local{}
 	default:

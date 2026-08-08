@@ -64,7 +64,7 @@
                         </span>
                         <!--end::Title-->
                         <!--begin::Container-->
-                        <div class="overlay mt-8">
+                        <div v-if="articleInfo.type !== 0 && articleInfo.pic" class="overlay mt-8">
                             <!--begin::Image-->
                             <div class="bgi-no-repeat bgi-position-center bgi-size-cover card-rounded min-h-350px" :style="{'backgroundImage':'url('+articleInfo.pic+')'}"></div>
                             <!--end::Image-->
@@ -74,8 +74,7 @@
                     <!--end::Wrapper-->
                     <!--begin::Description-->
                     <div class="fs-5 fw-semibold text-gray-600">
-                        <div class="content mb-8" v-html="articleInfo.content">
-                        </div>
+                        <div class="content mb-8" v-html="sanitizedContent"></div>
                     </div>
                     <!--end::Description-->
                     <!--begin::Block-->
@@ -89,7 +88,7 @@
                             <!--end::Avatar-->
                             <!--begin::Info-->
                             <div class="mb-0">
-                                <a href="../../demo1/dist/pages/user-profile/overview.html" class="text-gray-700 fw-bold text-hover-primary">飞龙Test</a>
+                                <span class="text-gray-700 fw-bold">飞龙</span>
                                 <span class="text-gray-400 fs-7 fw-semibold d-block mt-1">feilong</span>
                             </div>
                             <!--end::Info-->
@@ -104,45 +103,6 @@
                         <!--end::Text-->
                     </div>
                     <!--end::Block-->
-                    <!--begin::Icons-->
-                    <div class="d-flex flex-center">
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/facebook-4.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/instagram-2-1.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/github.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/behance.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/pinterest-p.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/twitter.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                        <!--begin::Icon-->
-                        <a href="#" class="mx-4">
-                            <img :src="getAssetPath('/media/svg/brand-logos/dribbble-icon-1.svg')" class="h-20px my-2" alt="" />
-                        </a>
-                        <!--end::Icon-->
-                    </div>
-                    <!--end::Icons-->
                 </div>
                 <!--end::Post content-->
 
@@ -192,7 +152,7 @@
                     <h4 class="text-dark mb-7">相关分类</h4>
                     
                     <!--begin::Item-->
-                    <template  v-for="item in articleSummary">
+                    <template v-for="item in articleSummary" :key="item.fid">
                         <div class="d-flex flex-stack fw-semibold fs-5 text-muted mb-4">
                             <!--begin::Text-->
                             <router-link class="text-muted text-hover-primary pe-2" :to="{ name: 'category', params: { id: item.fid } }">
@@ -214,7 +174,7 @@
                 <!--begin::Recent posts-->
                 <div class="m-0">
                     <h4 class="text-dark mb-7">最新发布</h4>
-                    <template v-for="(item,index) in articleList">
+                    <template v-for="item in articleList" :key="item.ID">
                         <!--begin::Item-->
                         <div class="d-flex mb-7">
                             <!--begin::Symbol-->
@@ -243,11 +203,11 @@
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
 import { useRouter } from "vue-router";
-import { ref,onMounted,watch } from "vue"
+import { computed, ref,onMounted,watch } from "vue"
 import service from "@/utils/request";
 import type { ArticleList,ArticelSummary } from "@/core/blog/ArticleTypes";
-import moment from "moment";
-import { delHtmlTag } from "@/utils/html"
+import dayjs from "dayjs";
+import DOMPurify from "dompurify";
 import CommentSection from "@/components/blog/CommentSection.vue";
 
 //弹窗
@@ -269,6 +229,7 @@ export default {
         const articleSummary = ref<Array<ArticelSummary>>([]);
         const articleList = ref<Array<ArticleList>>([]);
         const searchKeyword = ref("");
+		const sanitizedContent = computed(() => DOMPurify.sanitize(articleInfo.value.content || ""));
 
 
         onMounted(()=>{
@@ -374,8 +335,8 @@ export default {
             articleInfo,
             articleSummary,
             articleList,
-            moment,
-            delHtmlTag,
+            moment: dayjs,
+			sanitizedContent,
             gotoContent,
             searchKeyword,
             handleSearch,
@@ -394,4 +355,5 @@ export default {
         height: 100%;
     }
 }
+
 </style>

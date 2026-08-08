@@ -14,24 +14,15 @@
     <!--begin::Aside logo-->
     <div class="aside-logo flex-column-auto px-9 mb-9" id="kt_aside_logo">
       <!--begin::Logo-->
-      <router-link to="/dashboard">
-        <img
-          alt="Logo"
-          :src="getAssetPath('/media/logos/demo3.svg')"
-          class="h-20px logo theme-light-show"
-        />
-        <img
-          alt="Logo"
-          :src="getAssetPath('/media/logos/demo3-dark.svg')"
-          class="h-20px logo theme-dark-show"
-        />
+      <router-link :to="{ name: 'blog-home' }" class="studio-logo" aria-label="返回博客首页">
+        studio.
       </router-link>
       <!--end::Logo-->
     </div>
     <!--end::Aside logo-->
 
     <!--begin::Aside menu-->
-    <div class="aside-menu flex-column-fluid ps-5 pe-3">
+    <div class="aside-menu flex-column-fluid ps-5 pe-3 overflow-hidden">
       <KTMenu v-if="!authStore.isAuthenticated"></KTMenu>
       <KTAdminMenu v-if="authStore.isAuthenticated"></KTAdminMenu>
     </div>
@@ -128,3 +119,14 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.studio-logo {
+  color: #181c32;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -.055em;
+}
+
+[data-theme="dark"] .studio-logo { color: #fff; }
+</style>

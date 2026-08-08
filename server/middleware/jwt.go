@@ -43,8 +43,18 @@ func JWTAuth() gin.HandlerFunc {
 		if claims.ExpiresAt-time.Now().Unix() < claims.BufferTime {
 			dr, _ := utils.ParseDuration(global.BLOG_CONFIG.JWT.ExpiresTime)
 			claims.ExpiresAt = time.Now().Add(dr).Unix()
-			newToken, _ := j.CreateTokenByOldToken(token, *claims)
-			newClaims, _ := j.ParseToken(newToken)
+			newToken, err := j.CreateTokenByOldToken(token, *claims)
+			if err != nil {
+				response.FailWithDetailed(gin.H{"reload": true}, "刷新授权失败", c)
+				c.Abort()
+				return
+			}
+			newClaims, err := j.ParseToken(newToken)
+			if err != nil {
+				response.FailWithDetailed(gin.H{"reload": true}, "刷新授权失败", c)
+				c.Abort()
+				return
+			}
 			c.Header("new-token", newToken)
 			c.Header("new-expires-at", strconv.FormatInt(newClaims.ExpiresAt, 10))
 		}

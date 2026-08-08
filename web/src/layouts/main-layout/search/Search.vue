@@ -84,22 +84,6 @@
             </span>
             <!--end::Reset-->
 
-            <!--begin::Search Button-->
-            <div class="position-absolute top-50 end-0 translate-middle-y" v-if="search && !loading">
-              <button
-                @click="handleSearch"
-                type="button"
-                class="btn btn-sm btn-icon btn-active-color-primary me-2"
-                title="搜索文章"
-              >
-                <span class="svg-icon svg-icon-1">
-                  <inline-svg
-                    :src="getAssetPath('/media/icons/duotune/general/gen021.svg')"
-                  />
-                </span>
-              </button>
-            </div>
-            <!--end::Search Button-->
           </form>
           <!--end::Form-->
 
@@ -143,7 +127,6 @@
 import { getAssetPath } from "@/core/helpers/assets";
 import { defineComponent, ref } from "vue";
 import { useRouter } from "vue-router";
-import Results from "@/layouts/main-layout/search/partials/Results.vue";
 import PartialMain from "@/layouts/main-layout/search/partials/Main.vue";
 import Empty from "@/layouts/main-layout/search/partials/Empty.vue";
 import MenuComponent from "@/components/menu/MenuComponent.vue";
@@ -151,7 +134,6 @@ import MenuComponent from "@/components/menu/MenuComponent.vue";
 export default defineComponent({
   name: "kt-search",
   components: {
-    Results,
     PartialMain,
     Empty,
     MenuComponent,

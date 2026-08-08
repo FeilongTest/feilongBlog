@@ -1,149 +1,434 @@
-## [预览地址](http://101.201.62.226:8088/)
+# Feilong Blog
 
-## 4.18
-- [x] 按照官方模板Html添加vue的blog Home和blog Content
-- [x] 修复添加的blog页面资源问题,使用getAssetsPath()正确获取图片资源文件
-- [x] 修复 ki-duotone、Section3、Section4均有 图标异常问题,参考了官方文档使用svg修复
-- [x] 抽离BlogPhoto组件
-- [x] TODO 修复照片组件点击弹出预览界面问题 如有需求使用点击则放大的vue组件
-## 4.19
-- [x] 抽离臃肿系统做轻量化博客，删除public/media目录下文件如下,精简到的体积50m,减少1半
-    - books
-    - email
-    - features-logos
-    - framework-logos
-    - misc/layout
-    - plugins
-    - preview
-    - patterns
-    - product
-    - products
-    - stock/500x600
-    - stock/food
-- [x] 优化配置文件,重写getAssetPath和getIllustrationsPath,修复资源文件读取不到的问题
-## 4.20
-- [x] 添加test路由,展示components/dashboard-default-widgets下所有组件
-- [x] 修复模板中出现的<?php>代码问题
-- [x] 修改默认资源头像
-- [x] 添加Blog-Feeds页面
-## 4.24
-- [x] 重写菜单逻辑，完成博客前台菜单展示
-## 4.27
-- [x] 连接后端逻辑部分重写,脱离假数据,真实加载数据库内容。增加后端gin框架跨域中间件
-- [x] 思考如何解决多出OPTIONS请求的问题,以及本地不跨域请求
-## 4.28
-- [x] 用前端反向代理解决后端跨域问题,注意事项是需要配置前端域名,参考:https://vitejs.dev/config/
-- [x] 完成前台博客动态分类显示
-## 4.29
-- [x] 完成后端文章Api,实现文章动态显示以及文章分页
-- [x] 完成文章根据分类展示
-## 4.30
-- [x] 前后台路由分离,src/router/index.ts通过middleware:auth 关键词鉴权
-- [x] 后端菜单框架展示,直接使用模板的即可
-## 5.1
-- [x] 完成后台登录逻辑鉴权
-- [x] 重写gin jwt接口
-## 5.2
-- [x] 修复登录逻辑bug、修改signin界面
-- [x] 分类管理查看列表、分类管理新增
-## 5.5
-- [x] 完善分类管理、新增、修改逻辑
-## 5.7
-- [x] 新增文章管理逻辑
-## 5.8
-- [x] 完成添加/更新文章界面UI
-## 5.27
-- [x] 修复login的bug
-- [x] 修复Blog-Feeds不显示的Bug
-- [x] 修复菜单不显示的Bug
-- [x] 均统一为使用导出的interface类型
-- [x]为添加/更新文章界面增加文章分类选择和文章类型选择
-## 5.28
-- [x] 完成文章附件的上传
-- [x] 完成文章编辑wangeditor中的图片上传和展示
-- [x]对静态图片增加public关键字重定向,用于区分api和图片
-## 5.30
-- [x] 新增查询仅置顶、仅隐藏、全部文章分类
-- [x] 完成文章置顶、显示隐藏一键开关
-- [x]完成文章列表页面的全部功能和UI,包括搜索/删除/更新/查看
-- [x] 完成文章的更新以及新增
-## 5.31
-- [x] 完成文章的显示
-- [x] 完成数据库适配
-- [x]完成文章页面其他功能
-- [x] 解决分类跳转文章详情菜单active的bug
-## 6.1
-- [x] 解决进入文章后侧边菜单不同步的bug,暂时使用强制刷新页面的方法。该使用场景并不广
-- [x] 新增文章首页菜单,适配菜单不回收的bug,直接使用index
-- [x] 增加置顶标签
-- [x] 修复更新文章页面无法直接进入添加文章的bug(只是数据没有重置,使用强制刷新页面方案)
-- [x] 查看文章页面进入更新文章页面菜单不被激活
+一个前后端分离的个人博客系统，提供文章信息流、富文本内容、评论互动和后台内容管理。前端使用 Vue 3 与 Vite，后端使用 Gin 与 MySQL，并支持本地文件存储和 Cloudflare R2 对象存储。
 
-## 项目重构与优化（最新）
-### 项目清理
-- [x] 清理冗余路由：删除LayoutBuilder、Test、crafted/pages、apps等相关路由
-- [x] 清理冗余菜单：删除Components、Documentation、Changelog等外部链接
-- [x] 删除无用组件：删除MessengerDrawer、ActivityDrawer、CreateApp、InviteFriendsModal等
-- [x] 删除无用静态资源：清理demo、preview等相关资源
-- [x] 移除未使用的npm依赖：删除apexcharts、vue3-apexcharts、@fullcalendar/*、clipboard、quill等
-- [x] 修复前端路由结构：优化博客前台和后台路由分离，确保页面正常加载
+## 在线预览
 
-### 功能增强
-- [x] **评论功能**：
-  - 前台文章详情页显示评论列表和评论表单
-  - 后台评论管理（查看、显示/隐藏、删除）
-  - 文章列表显示评论数量统计
-  - 适配blog_comment表结构，支持status字段（0显示/1隐藏）
-- [x] **友情链接功能**：
-  - 前台侧边栏显示友情链接列表
-  - 后台友链管理（新增、编辑、删除、显示/隐藏）
-  - 优化友链显示样式，适配移动端
-  - 修复数据库字段问题（移除sort字段，添加status字段）
-- [x] **搜索功能优化**：
-  - 首页搜索框支持文章标题搜索
-  - 文章详情页侧边栏添加搜索功能
-  - 实现搜索历史记录（localStorage存储，最多10条）
-  - 修复搜索后URL污染问题（自动清理query参数）
-  - 搜索历史支持点击重新搜索和删除操作
-- [x] **侧边栏按钮优化**：
-  - Demos按钮改为"友情链接"，显示友链列表
-  - Help按钮改为GitHub链接（https://github.com/FeilongTest）
-  - 删除Buy Now按钮
-- [x] **前后台切换逻辑优化**：
-  - 根据token自动判断登录状态，已登录用户直接进入后台
-  - 未登录时"退出登录"按钮显示为"进入后台"
-  - 优化菜单隐藏逻辑，确保点击后菜单正确关闭
+- 博客地址：[https://teshh.com](https://teshh.com)
+- 后台入口：[https://teshh.com/#/sign-in](https://teshh.com/#/sign-in)
 
-### UI优化
-- [x] **后台仪表盘重设计**：
-  - 显示真实统计数据（文章数、分类数、评论数、友链数）
-  - 添加快捷操作卡片（文章管理、分类管理、创建文章、评论管理、友链管理、博客首页）
-  - 统一使用Bootstrap主题风格
-- [x] **统一按钮风格**：
-  - 评论管理和友链管理按钮样式统一为Bootstrap风格
-  - 使用Bootstrap表格替代Element Plus表格
-  - 统一分页组件样式
-- [x] **登录页面优化**：
-  - 移除Metronic相关元素和推广内容
-  - 简化登录界面，添加欢迎文本
-  - 翻译所有UI文本为中文
-- [x] **菜单优化**：
-  - 移除语言切换按钮（未实际使用）
-  - 简化用户账户菜单，只保留用户信息和登录/退出功能
+> 后台需要管理员账号，项目不提供公开测试账号。
 
-### Bug修复
-- [x] 修复前端路由404错误，确保所有页面正常加载
-- [x] 修复评论status逻辑（0为显示，1为隐藏）
-- [x] 修复数据库字段错误（sort字段不存在问题）
-- [x] 修复友链status字段缺失问题
-- [x] 修复评论管理页面分页数据格式问题
-- [x] 修复搜索后URL参数污染问题
-- [x] 修复菜单在未登录状态下点击后不隐藏的问题
-- [x] 修复TypeScript类型错误和模块导入错误
+## 功能特性
 
-### 技术改进
-- [x] 优化路由守卫逻辑，基于JWT token自动判断认证状态
-- [x] 优化API响应处理，统一分页数据格式
-- [x] 优化组件间通信，使用自定义事件实现搜索历史更新
-- [x] 优化数据库查询，使用批量查询优化评论数量统计
-- [x] 添加表单验证标签（form tags）确保参数正确绑定
+### 博客前台
+
+- 文章与纯文本动态信息流
+- 文章缩略图和富文本图片展示
+- 一级、二级分类导航
+- 标题搜索与分页
+- 文章详情和评论
+- 基于访客标识的点赞功能
+- 响应式布局与深色模式
+
+### 管理后台
+
+- JWT 登录鉴权
+- 文章新增、编辑、隐藏、置顶和删除
+- 按标题、分类和状态筛选文章
+- WangEditor 富文本编辑器
+- 本地或 Cloudflare R2 图片上传
+- 树形分类管理
+- 评论与友情链接管理
+- PV、UV、文章、评论和点赞统计
+
+## 技术栈
+
+| 模块 | 技术 |
+| --- | --- |
+| 前端 | Vue 3、TypeScript、Vite、Pinia、Vue Router |
+| UI | Bootstrap 5、Element Plus、Bootstrap Icons |
+| 编辑器 | WangEditor |
+| 后端 | Go、Gin、GORM、Viper、Zap |
+| 数据库 | MySQL |
+| 文件存储 | 本地存储、Cloudflare R2 |
+
+## 项目结构
+
+```text
+blog/
+├─ server/                 # Gin 后端
+│  ├─ api/                 # API 控制器
+│  ├─ config/              # 配置结构
+│  ├─ initialize/          # 路由、数据库初始化
+│  ├─ middleware/          # JWT、CORS 等中间件
+│  ├─ model/               # 数据模型
+│  ├─ router/              # 路由注册
+│  ├─ service/             # 业务逻辑
+│  ├─ utils/               # 通用工具与存储实现
+│  ├─ config.yaml          # 本地开发配置
+│  └─ config.production.yaml
+├─ web/                    # Vue 前端
+├─ blog.sql                # 初始数据库
+└─ README.md
+```
+
+## 环境要求
+
+- Node.js 22+
+- Go 1.19+
+- MySQL 5.7+ 或兼容版本（生产环境推荐 MySQL 8.0+）
+
+Linux、macOS 和 Windows 均可用于本地开发。生产环境推荐使用常见的 Linux 发行版，x86_64 与 ARM64 均可运行。
+
+## 快速开始
+
+### 1. 获取代码
+
+```bash
+git clone <repository-url> feilong-blog
+cd feilong-blog
+```
+
+### 2. 初始化数据库
+
+```sql
+CREATE DATABASE blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+导入项目根目录的 `blog.sql`：
+
+```bash
+mysql -u root -p blog < blog.sql
+```
+
+### 3. 配置并启动后端
+
+复制配置模板，再修改数据库、JWT 和存储配置。`config.yaml` 包含敏感信息，已被 Git 忽略。
+
+```bash
+cd server
+cp config.example.yaml config.yaml
+```
+
+使用本地文件存储时：
+
+```yaml
+system:
+  env: public
+  addr: 8889
+  db-type: mysql
+  oss-type: local
+
+local:
+  path: uploads/file
+  store-path: uploads/file
+```
+
+使用 Cloudflare R2 时：
+
+```yaml
+system:
+  env: public
+  addr: 8889
+  db-type: mysql
+  oss-type: r2
+
+r2:
+  account-id: your-account-id
+  access-key-id: your-access-key-id
+  secret-access-key: your-secret-access-key
+  bucket: your-bucket-name
+  public-url: https://img.example.com
+  max-size-mb: 10
+```
+
+MySQL 和 JWT 配置示例：
+
+```yaml
+mysql:
+  path: 127.0.0.1
+  port: "3306"
+  config: charset=utf8mb4&parseTime=True&loc=Local
+  db-name: blog
+  username: root
+  password: your-password
+
+jwt:
+  signing-key: replace-with-a-random-string-at-least-32-characters
+  expires-time: 24h
+  buffer-time: 2h
+  issuer: blog
+```
+
+启动后端：
+
+```bash
+cd server
+go mod download
+go run . -c config.yaml
+```
+
+检查服务：
+
+```bash
+curl http://127.0.0.1:8889/health
+```
+
+### 4. 启动前端
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+访问 [http://localhost:5173](http://localhost:5173)。开发服务器会把 `/blog` 请求代理到 `http://127.0.0.1:8889`。
+
+## 配置说明
+
+后端通过 YAML 文件读取配置，可使用以下方式指定配置文件：
+
+```bash
+./blog-server -c /path/to/config.yaml
+```
+
+也可以设置 `BLOG_CONFIG`：
+
+```bash
+export BLOG_CONFIG=/path/to/config.yaml
+./blog-server
+```
+
+配置文件优先级为：命令行 `-c`、`BLOG_CONFIG`、默认配置文件。生产环境建议始终显式指定 `config.production.yaml`。
+
+前端 API 地址通过 `VITE_BLOG_API_URL` 设置：
+
+```env
+VITE_BLOG_API_URL=/blog
+```
+
+推荐在生产环境保持 `/blog`，再由 Nginx 或其他反向代理转发至 Gin。这样前端和 API 使用同一域名，无需额外处理跨域。
+
+## 文件存储
+
+### 本地存储
+
+设置 `system.oss-type: local`。上传文件会保存到 `local.store-path`，并通过 `local.path` 对外提供访问。
+
+本地存储适合开发、小型站点或已经具备共享磁盘的环境。部署时应备份上传目录，并确保运行后端的用户具有写入权限。
+
+### Cloudflare R2
+
+设置 `system.oss-type: r2`，并填写 R2 S3 凭据、桶名和公开访问地址。
+
+建议：
+
+- 为博客单独创建只拥有目标桶对象读写权限的凭据。
+- 使用自定义域名提供公开图片，不在生产环境使用 `r2.dev` 地址。
+- R2 密钥只存放在后端配置中，不能写入 `VITE_*` 前端变量。
+- 根据实际前端域名配置桶的 CORS 规则。
+
+参考文档：[R2 公共桶](https://developers.cloudflare.com/r2/buckets/public-buckets/)、[R2 CORS](https://developers.cloudflare.com/r2/buckets/cors/)。
+
+## 构建
+
+### 前端
+
+```bash
+cd web
+npm ci
+npm run build
+```
+
+构建结果位于 `web/dist`。
+
+### 后端
+
+```bash
+cd server
+go build -trimpath -ldflags="-s -w" -o blog-server .
+```
+
+交叉编译示例（后端不依赖 CGO）：
+
+```bash
+# Linux x86_64
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o blog-server .
+
+# Linux ARM64
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o blog-server .
+```
+
+在 PowerShell 中交叉编译时使用 `$env:CGO_ENABLED`、`$env:GOOS` 和 `$env:GOARCH` 设置环境变量。如需进一步缩小文件，可在构建后执行 `upx --best blog-server`，并使用 `upx -t blog-server` 检查压缩产物。
+
+## 推荐部署方式
+
+适合大多数用户的部署组合：
+
+- 一台 Linux VPS 或云服务器
+- Nginx 提供前端静态文件和 HTTPS
+- systemd 管理 Gin 服务
+- MySQL 使用本机实例或托管数据库
+- 图片使用本地存储或兼容 S3 的对象存储
+
+```text
+Browser
+   │
+   ▼
+Nginx :80 / :443
+   ├─ /           → /var/www/feilong-blog/web
+   └─ /blog/*     → Gin 127.0.0.1:8889
+                          │
+                          ├─ MySQL
+                          └─ Local / R2 storage
+```
+
+### 1. 准备生产配置
+
+在本地复制并修改生产配置，确保以下内容不再使用示例值：
+
+```bash
+cp server/config.example.yaml server/config.production.yaml
+```
+
+- MySQL 地址、账号和密码
+- JWT signing key
+- CORS 域名
+- R2 凭据和公开地址（使用 R2 时）
+
+建议限制配置文件权限：
+
+```bash
+chmod 600 server/config.production.yaml
+```
+
+生产配置不要提交到 Git。推荐在本地完成构建，然后仅上传后端二进制、生产配置和前端 `dist` 成品。服务器目录可整理为：
+
+```text
+/var/www/feilong-blog/
+├─ blog-server
+├─ config.production.yaml
+├─ web/
+├─ log/
+└─ backups/
+```
+
+### 2. 使用 systemd 运行后端
+
+创建 `/etc/systemd/system/feilong-blog.service`：
+
+```ini
+[Unit]
+Description=Feilong Blog API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/feilong-blog
+ExecStart=/var/www/feilong-blog/blog-server -c /var/www/feilong-blog/config.production.yaml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启动服务：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now feilong-blog
+sudo systemctl status feilong-blog
+```
+
+确保 `www-data` 对工作目录、日志目录以及本地上传目录拥有所需权限，并将生产配置权限设为 `600`。
+
+### 3. 配置 Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name blog.example.com;
+
+    root /var/www/feilong-blog/web;
+    index index.html;
+    client_max_body_size 10m;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /blog/ {
+        proxy_pass http://127.0.0.1:8889/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+复制前端产物并重载 Nginx：
+
+```bash
+sudo mkdir -p /var/www/feilong-blog/web
+sudo cp -a web/dist/. /var/www/feilong-blog/web/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+使用 Certbot、Caddy 自动 HTTPS 或云平台证书为站点启用 TLS。若域名接入 Cloudflare，建议源站具备有效证书并使用 **Full (strict)** 模式。
+
+### 其他部署选择
+
+- 前端可以单独发布到 Cloudflare Pages、Vercel、Netlify 等静态托管平台。
+- 后端可以部署到任何能够长期运行 Go 程序并访问 MySQL 的平台。
+- 前后端使用不同域名时，需要同时配置 `VITE_BLOG_API_URL` 和后端 CORS 白名单。
+- 使用托管数据库时，应开启 TLS、限制来源地址并使用专用数据库账号。
+
+## 更新部署
+
+在本地重新构建并完成测试，只把成品上传到服务器。替换后端二进制前先停止服务，避免覆盖正在执行的文件：
+
+```bash
+# 在服务器执行，文件名可按实际上传路径调整
+sudo systemctl stop feilong-blog
+sudo install -m 0755 /tmp/blog-server /var/www/feilong-blog/blog-server
+sudo systemctl start feilong-blog
+
+sudo cp -a /tmp/web-dist/. /var/www/feilong-blog/web/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+更新后检查：
+
+```bash
+curl http://127.0.0.1:8889/health
+sudo systemctl status feilong-blog
+journalctl -u feilong-blog --since "10 minutes ago"
+```
+
+## 测试
+
+```bash
+# 后端
+cd server
+go test ./...
+
+# 前端类型检查和生产构建
+cd ../web
+npm run type-check
+npm run build
+```
+
+## 安全建议
+
+- 不要提交数据库密码、JWT 密钥或对象存储密钥。
+- 为数据库和对象存储创建最小权限账号。
+- 不要将 MySQL 和 Gin 的内部端口直接暴露到公网。
+- 定期备份 MySQL 和本地上传文件。
+- 限制上传大小和允许的文件类型。
+- 首次部署后立即修改默认管理员密码。
+- 已经出现在提交记录、日志或聊天中的凭据应立即轮换。
+
+## License
+
+项目暂未声明开源许可证。使用、修改或分发前请先获得作者许可。

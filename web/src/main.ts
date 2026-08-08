@@ -2,6 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { Tooltip } from "bootstrap";
 import App from "./App.vue";
+import "@fontsource-variable/inter";
 
 /*
 TIP: To get started with clean router change path to @/router/clean.ts.
@@ -10,8 +11,6 @@ import router from "./router";
 import ElementPlus from "element-plus";
 import i18n from "@/core/plugins/i18n";
 
-//imports for app initialization
-import ApiService from "@/core/services/ApiService";
 import { initInlineSvg } from "@/core/plugins/inline-svg";
 import { initVeeValidate } from "@/core/plugins/vee-validate";
 
@@ -22,7 +21,6 @@ app.use(createPinia());
 app.use(router);
 app.use(ElementPlus);
 
-ApiService.init(app);
 initInlineSvg(app);
 initVeeValidate();
 

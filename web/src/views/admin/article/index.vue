@@ -4,17 +4,29 @@
     <!--begin::Card header-->
     <div class="card-header border-0 pt-6">
       <!--begin::Card title-->
-      <div class="card-title">
+      <div class="card-title flex-wrap gap-3">
         <!--begin::Search-->
         <div class="d-flex align-items-center position-relative my-1">
 
           <input type="text" data-kt-subscription-table-filter="search"
-            class="form-control form-control-solid w-230px ps-6" placeholder="输入标题关键字进行搜索" v-model="searchKeywords"/>
-          <span class="btn svg-icon svg-icon-1 position-absolute end-0" @click="getArticleList(false,false,searchKeywords)">
+            class="form-control form-control-solid w-230px ps-6" placeholder="输入标题关键字进行搜索" v-model="searchKeywords" @keyup.enter="applySearch"/>
+          <span class="btn svg-icon svg-icon-1 position-absolute end-0" @click="applySearch">
             <inline-svg :src="getAssetPath('/media/icons/duotune/general/gen004.svg')" />
           </span>
         </div>
         <!--end::Search-->
+
+        <el-select v-model="selectedCategory" class="category-filter" placeholder="全部分类" filterable @change="applyCategory">
+          <el-option :value="0" label="全部分类" />
+          <el-option-group v-for="group in categoryGroups" :key="group.root.ID" :label="group.root.name">
+            <el-option :value="group.root.ID" :label="`${group.root.name}（一级分类）`" />
+            <el-option v-for="child in group.children" :key="child.ID" :value="child.ID" :label="`　${child.name}`" />
+          </el-option-group>
+        </el-select>
+
+        <button v-if="hasActiveFilters" type="button" class="btn btn-sm btn-light-primary" @click="resetFilters">
+          <i class="bi bi-x-circle me-2"></i>清除筛选
+        </button>
       </div>
       <!--begin::Card title-->
 
@@ -25,22 +37,19 @@
           <!--begin::Tab nav-->
           <ul class="nav nav-stretch fs-5 fw-semobold nav-line-tabs nav-line-tabs-2x border-transparent" role="tablist">
             <li class="nav-item" role="presentation">
-              <a id="kt_referrals_year_tab" class="nav-link text-active-primary active" data-bs-toggle="tab" role="tab"
-                href="#kt_customer_details_invoices_1" @click="()=>{getArticleList()}">
+              <a class="nav-link text-active-primary" :class="{ active: statusFilter === 'all' }" href="#" @click.prevent="setStatusFilter('all')">
                 全部
               </a>
             </li>
             
             <li class="nav-item" role="presentation">
-              <a id="kt_referrals_year_tab" class="nav-link text-active-primary" data-bs-toggle="tab" role="tab"
-                href="#kt_customer_details_invoices_2" @click="()=>{getArticleList(true,false)}">
+              <a class="nav-link text-active-primary" :class="{ active: statusFilter === 'top' }" href="#" @click.prevent="setStatusFilter('top')">
                 仅置顶
               </a>
             </li>
 
             <li class="nav-item" role="presentation">
-              <a id="kt_referrals_2019_tab" class="nav-link text-active-primary ms-3" data-bs-toggle="tab" role="tab"
-                href="#kt_customer_details_invoices_3" @click="()=>{getArticleList(false,true)}">
+              <a class="nav-link text-active-primary ms-3" :class="{ active: statusFilter === 'hidden' }" href="#" @click.prevent="setStatusFilter('hidden')">
                 仅隐藏
               </a>
             </li>
@@ -74,9 +83,12 @@
           <div>{{ article.ID }}</div>
         </template>
         <template v-slot:title="{ row: article }">
-          <router-link to="/apps/subscriptions/view-subscription" href="" class="text-gray-800 text-hover-primary mb-1">
+          <router-link :to="`/admin/article/content/${article.ID}`" class="text-gray-800 text-hover-primary mb-1">
             {{ article.title }}
           </router-link>
+        </template>
+        <template v-slot:category="{ row: article }">
+          <span class="badge badge-light-primary fw-semibold">{{ getCategoryName(article.fid) }}</span>
         </template>
         <template v-slot:view="{ row: article }">
           <div class="badge badge-light">{{ article.view }}</div>
@@ -138,14 +150,15 @@
   
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, ref, onMounted, watch } from "vue";
+import { computed, defineComponent, ref, onMounted } from "vue";
 import KTDatatable from "@/components/kt-datatable/KTDataTable.vue";
 import type { Sort } from "@/components/kt-datatable/table-partials/models";
 import arraySort from "array-sort";
 import service from "@/utils/request";
 import type { ArticleList } from "@/core/blog/ArticleTypes"
+import type { CategoryList } from "@/core/blog/CategoryTypes"
 import { ElNotification } from 'element-plus'
-import moment from "moment";
+import dayjs from "dayjs";
 import Swal from "sweetalert2";
 
 
@@ -160,6 +173,9 @@ export default defineComponent({
     const page = ref(1);
     const total = ref(0);
     const pageSize = ref(10);
+    const category = ref<Array<CategoryList>>([]);
+    const selectedCategory = ref(0);
+    const statusFilter = ref<"all" | "top" | "hidden">("all");
 
     const articleList = ref<Array<ArticleList>>([]);
 
@@ -173,6 +189,10 @@ export default defineComponent({
         columnName: "文章名称",
         columnLabel: "title",
         sortEnabled: true,
+      },
+      {
+        columnName: "所属分类",
+        columnLabel: "category",
       },
       {
         columnName: "查看次数",
@@ -225,30 +245,15 @@ export default defineComponent({
       selectedIds.value = selectedItems;
     };
 
-    const getArticleList = async (top?:boolean,hide?:boolean,keyword?:string) => {
-      let params = {};
-      params = {
+    const getArticleList = async () => {
+      const params = {
           page: page.value,
           pageSize: pageSize.value,
-      }
-      if(top){
-        params = {
-          ...params,
-          top:true,
-        };
-      }
-      if(hide){
-        params = {
-          ...params,
-          hide:true,
-        };
-      }
-      if(keyword){
-        params = {
-          ...params,
-          keyword:keyword,
-        };
-      }
+          fid: selectedCategory.value || undefined,
+          top: statusFilter.value === "top" || undefined,
+          hide: statusFilter.value === "hidden" || undefined,
+          keyword: searchKeywords.value || undefined,
+      };
       service({
         url: "/admin/article/getArticleList",
         method: "get",
@@ -258,15 +263,31 @@ export default defineComponent({
           if (data !== undefined) {
             total.value = data.total;
             articleList.value = data.list;
-            ElNotification({
-              duration: 2000,
-              title: 'Success',
-              message: "获取成功",
-              type: 'success',
-            })
           }
         })
     }
+
+    const getCategoryList = async () => {
+      const { data } = await service.get("/admin/category/getCategoryList");
+      category.value = data || [];
+    };
+
+    const categoryGroups = computed(() => category.value
+      .filter(item => item.fid === 0)
+      .map(root => ({ root, children: category.value.filter(item => item.fid === root.ID) })));
+
+    const getCategoryName = (fid: number) => category.value.find(item => item.ID === fid)?.name || `分类 ${fid}`;
+    const hasActiveFilters = computed(() => Boolean(selectedCategory.value || searchKeywords.value || statusFilter.value !== "all"));
+    const refreshFromFirstPage = () => { page.value = 1; getArticleList(); };
+    const applyCategory = () => refreshFromFirstPage();
+    const applySearch = () => refreshFromFirstPage();
+    const setStatusFilter = (value: "all" | "top" | "hidden") => { statusFilter.value = value; refreshFromFirstPage(); };
+    const resetFilters = () => {
+      selectedCategory.value = 0;
+      searchKeywords.value = "";
+      statusFilter.value = "all";
+      refreshFromFirstPage();
+    };
 
     const delArticle = async (id:number) => {
       Swal.fire(
@@ -371,7 +392,8 @@ export default defineComponent({
     }
 
 
-    onMounted(() => {
+    onMounted(async () => {
+      await getCategoryList();
       getArticleList();
     })
 
@@ -404,13 +426,34 @@ export default defineComponent({
       selectedIds,
       deleteArticle,
       getAssetPath,
-      moment,
+      moment: dayjs,
       delArticle,
       delArticleByIds,
       updateArticle,
       getArticleList,
+      categoryGroups,
+      selectedCategory,
+      statusFilter,
+      getCategoryName,
+      hasActiveFilters,
+      applyCategory,
+      applySearch,
+      setStatusFilter,
+      resetFilters,
     };
   },
 });
 </script>
-  
+
+<style lang="scss" scoped>
+.category-filter { width: 250px; }
+:deep(.category-filter .el-select__wrapper) {
+  min-height: 43px;
+  border-radius: .625rem;
+  background: var(--kt-gray-100);
+  box-shadow: none;
+}
+@media (max-width: 767.98px) {
+  .category-filter { width: 100%; }
+}
+</style>

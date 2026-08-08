@@ -9,12 +9,53 @@ import (
 	"feilongBlog/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"strings"
 )
 
 type ArticleApi struct {
 }
 
 var articleApi = blog.ArticleService{}
+
+// LikeArticle 点赞或取消点赞
+func (a *ArticleApi) LikeArticle(c *gin.Context) {
+	var req model.ArticleLikeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	req.VisitorID = strings.TrimSpace(req.VisitorID)
+	if req.Aid == 0 || req.VisitorID == "" || len(req.VisitorID) > 64 {
+		response.FailWithMessage("点赞参数不合法", c)
+		return
+	}
+	liked, count, err := articleApi.LikeArticle(req)
+	if err != nil {
+		response.FailWithMessage("点赞失败", c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"liked": liked, "count": count}, "操作成功", c)
+}
+
+// GetArticleLike 获取点赞状态
+func (a *ArticleApi) GetArticleLike(c *gin.Context) {
+	var req model.ArticleLikeRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	req.VisitorID = strings.TrimSpace(req.VisitorID)
+	if req.Aid == 0 || req.VisitorID == "" || len(req.VisitorID) > 64 {
+		response.FailWithMessage("点赞参数不合法", c)
+		return
+	}
+	liked, count, err := articleApi.GetArticleLike(req)
+	if err != nil {
+		response.FailWithMessage("获取点赞状态失败", c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"liked": liked, "count": count}, "获取成功", c)
+}
 
 // GetArticleList 获取文章列表
 func (a *ArticleApi) GetArticleList(c *gin.Context) {

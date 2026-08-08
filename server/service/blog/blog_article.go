@@ -21,22 +21,23 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 	db := global.BLOG_DB.Model(&model.Article{})
 	//如果拥有搜索条件
 	if info.Fid != 0 {
-		db.Where("fid = ?", info.Fid)
+		db = db.Where("fid = ?", info.Fid)
 	}
 	if info.Top {
-		db.Where("istop = ?", 1)
+		db = db.Where("istop = ?", 1)
 	}
 	if info.Hide {
-		db.Where("status = ?", 1)
+		db = db.Where("status = ?", 1)
 	}
 	if info.Keyword != "" {
-		db.Where("title LIKE ?", "%"+info.Keyword+"%")
+		db = db.Where("title LIKE ?", "%"+info.Keyword+"%")
 	}
+	db = db.Where("status = ?", 0)
 	err = db.Count(&total).Error
 	if err != nil {
 		return
 	}
-	err = db.Limit(limit).Offset(offset).Where("status = ?", 0).Order("istop desc,ctime desc").Find(&article).Error
+	err = db.Limit(limit).Offset(offset).Order("istop desc,ctime desc").Find(&article).Error
 
 	// 统计每篇文章的评论数量
 	if err == nil && len(article) > 0 {
@@ -63,9 +64,25 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 			commentMap[uint(cc.Aid)] = cc.Count
 		}
 
-		// 设置每篇文章的评论数量
+		var likeCounts []struct {
+			Aid   uint
+			Count int64
+		}
+		global.BLOG_DB.Model(&model.ArticleLike{}).
+			Select("aid, count(*) as count").
+			Where("aid IN ?", articleIds).
+			Group("aid").
+			Find(&likeCounts)
+
+		likeMap := make(map[uint]int64)
+		for _, like := range likeCounts {
+			likeMap[like.Aid] = like.Count
+		}
+
+		// 设置每篇文章的评论和点赞数量
 		for i := range article {
 			article[i].CommentCount = int(commentMap[article[i].ID])
+			article[i].LikeCount = int(likeMap[article[i].ID])
 		}
 	}
 
@@ -80,16 +97,16 @@ func (s *ArticleService) GetArticleListAdmin(info model.ArticleSearch) (article 
 	db := global.BLOG_DB.Model(&model.Article{})
 	//如果拥有搜索条件
 	if info.Fid != 0 {
-		db.Where("fid = ?", info.Fid)
+		db = db.Where("fid = ?", info.Fid)
 	}
 	if info.Top {
-		db.Where("istop = ?", 1)
+		db = db.Where("istop = ?", 1)
 	}
 	if info.Hide {
-		db.Where("status = ?", 1)
+		db = db.Where("status = ?", 1)
 	}
 	if info.Keyword != "" {
-		db.Where("title LIKE ?", "%"+info.Keyword+"%")
+		db = db.Where("title LIKE ?", "%"+info.Keyword+"%")
 	}
 	err = db.Count(&total).Error
 	if err != nil {
@@ -139,6 +156,12 @@ func (s *ArticleService) GetArticleSummary(id int) (result any, err error) {
 func (s *ArticleService) GetArticle(id int) (article model.Article, err error) {
 	db := global.BLOG_DB.Where("id = ?", id).First(&article)
 	err = db.Error
+	if err == nil {
+		var likeCount int64
+		if countErr := global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", id).Count(&likeCount).Error; countErr == nil {
+			article.LikeCount = int(likeCount)
+		}
+	}
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		return tx.Update("view", gorm.Expr("view + ?", 1)).Error
 	}); err == nil {
@@ -178,4 +201,37 @@ func (s *ArticleService) DeleteArticle(article model.Article) (err error) {
 func (s *ArticleService) DeleteArticleByIds(ids request.IdsReq) (err error) {
 	err = global.BLOG_DB.Delete(&[]model.Article{}, "id in ?", ids.Ids).Error
 	return err
+}
+
+// LikeArticle 点赞或取消点赞
+func (s *ArticleService) LikeArticle(req model.ArticleLikeRequest) (liked bool, count int64, err error) {
+	err = global.BLOG_DB.Transaction(func(tx *gorm.DB) error {
+		var like model.ArticleLike
+		result := tx.Where("aid = ? AND visitor_id = ?", req.Aid, req.VisitorID).First(&like)
+		if result.Error == nil {
+			liked = false
+			return tx.Delete(&like).Error
+		}
+		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return result.Error
+		}
+		liked = true
+		return tx.Create(&model.ArticleLike{Aid: req.Aid, VisitorID: req.VisitorID, Ctime: int(time.Now().Unix())}).Error
+	})
+	if err == nil {
+		err = global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", req.Aid).Count(&count).Error
+	}
+	return
+}
+
+// GetArticleLike 获取访客的点赞状态
+func (s *ArticleService) GetArticleLike(req model.ArticleLikeRequest) (liked bool, count int64, err error) {
+	err = global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", req.Aid).Count(&count).Error
+	if err != nil {
+		return
+	}
+	var likeCount int64
+	err = global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ? AND visitor_id = ?", req.Aid, req.VisitorID).Count(&likeCount).Error
+	liked = likeCount > 0
+	return
 }

@@ -15,15 +15,19 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 	var categoryApi = v1.ApiGroupApp.CategoryApiGroup
 	var commentApi = v1.ApiGroupApp.CommentApiGroup
 	var friendlinkApi = v1.ApiGroupApp.FriendlinkApiGroup
+	var statisticApi = v1.ApiGroupApp.StatisticApiGroup
 	{
 		apiRouterWithoutRecord.POST("login", userRouterApi.Login)                        // 登录
 		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList)       // 获取分类
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)          //获取文章列表
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)                 //获取文章信息
 		apiRouterWithoutRecord.POST("getSummary", articleApi.GetArticleSummary)          //获取分类概述
+		apiRouterWithoutRecord.POST("likeArticle", articleApi.LikeArticle)               //点赞或取消点赞
+		apiRouterWithoutRecord.GET("getArticleLike", articleApi.GetArticleLike)          //获取点赞状态
 		apiRouterWithoutRecord.GET("getCommentList", commentApi.GetCommentList)          //获取评论列表
 		apiRouterWithoutRecord.POST("createComment", commentApi.CreateComment)           //创建评论
 		apiRouterWithoutRecord.GET("getAllFriendlinks", friendlinkApi.GetAllFriendlinks) //获取所有友链（前台）
+		apiRouterWithoutRecord.POST("visit", statisticApi.RecordVisit)                   //记录网站访问
 	}
 }
 
@@ -86,5 +90,13 @@ func (s *ApiRouter) InitFriendlinkRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.POST("createFriendlink", friendlinkApi.CreateFriendlink)   // 创建友链
 		apiRouterWithoutRecord.PUT("updateFriendlink", friendlinkApi.UpdateFriendlink)    // 更新友链
 		apiRouterWithoutRecord.DELETE("deleteFriendlink", friendlinkApi.DeleteFriendlink) // 删除友链
+	}
+}
+
+func (s *ApiRouter) InitStatisticRouter(Router *gin.RouterGroup) {
+	apiRouterWithoutRecord := Router.Group("statistics")
+	statisticApi := v1.ApiGroupApp.StatisticApiGroup
+	{
+		apiRouterWithoutRecord.GET("dashboard", statisticApi.GetDashboard)
 	}
 }

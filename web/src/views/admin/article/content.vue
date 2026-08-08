@@ -69,11 +69,11 @@
                       v-model="articleInfo.type" >
                         <option
                           label="普通文章"
-                          value="1"
+                          :value="1"
                         ></option>
                         <option
-                          label="APP文章(待开发)"
-                          value="2"
+                          label="纯文本动态"
+                          :value="0"
                         ></option>
                       </Field>
                     <div class="fv-plugins-message-container">
@@ -116,7 +116,7 @@
         <div class="card-body pt-0 fs-6">
 
           <!-- 缩略图开始 -->
-          <div class="mt-7 mb-5 row">
+          <div v-if="Number(articleInfo.type) !== 0" class="mt-7 mb-5 row">
             <!--begin::Label-->
             <label class="fs-5 mb-7 fw-semobold">缩略图</label>
             <!--end::Label-->
@@ -211,8 +211,18 @@ export default defineComponent({
   },
   setup() {
 
-    //为public关键字进行后端URL重定向
-    const publicApi = "public/";
+    // 本地存储返回相对路径，R2 返回完整 URL；两种存储方式都需要兼容。
+    const resolveUploadedUrl = (url: string): string => {
+      const value = url?.trim();
+      if (!value) return "";
+      if (/^(?:https?:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value) || value.startsWith("/")) {
+        return value;
+      }
+      if (value.startsWith("public/")) {
+        return value;
+      }
+      return `public/${value.replace(/^\.\//, "")}`;
+    };
     const category = ref<Array<CategoryList>>([]);
     const articleInfo = ref<ArticleList>({} as ArticleList);
     const articleMode = ref("新增");
@@ -262,7 +272,7 @@ export default defineComponent({
           },
           customInsert(res: any, insertFn: InsertFnType): void{
             if(res.code == 0){
-              insertFn(publicApi+res.data.url,res.data.alt,"")
+              insertFn(resolveUploadedUrl(res.data.url),res.data.alt,"")
               ElNotification({
                 duration:1500,
                 title: 'success',
@@ -311,8 +321,8 @@ export default defineComponent({
       }
       postData = {
         ...articleInfo.value,
-        pic:data.value.imgStr,
-        content:valueHtml.value
+        content:valueHtml.value,
+        pic:Number(articleInfo.value.type) === 0 ? "" : data.value.imgStr
       }
       if(articleMode.value == "新增"){
         url = "/admin/article/createArticle"
@@ -356,14 +366,11 @@ export default defineComponent({
     const uploadImg = (img: any) => {
       let formdata = new FormData()
       formdata.append("file", img) //将每一个文件图片都加进formdata
-      service.post("/admin/file/upload",formdata,{
-        headers:{
-          "Content-type":"multpart/form-data"
-        }
-      })
+      service.post("/admin/file/upload", formdata)
       .then(res => {
-        data.value.img =   publicApi + res.data.url;
-        data.value.imgStr = publicApi + res.data.url;
+        const imageUrl = resolveUploadedUrl(res.data.url);
+        data.value.img = imageUrl;
+        data.value.imgStr = imageUrl;
       })  
     }
 

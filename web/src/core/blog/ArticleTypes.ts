@@ -13,6 +13,7 @@ interface ArticleList {
     isTop:number;
     status:number;
     commentCount:number;
+    likeCount:number;
 }
 interface ArticelSummary {
     fid:number;

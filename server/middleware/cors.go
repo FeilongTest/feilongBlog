@@ -21,6 +21,7 @@ func Cors() gin.HandlerFunc {
 		// 放行所有OPTIONS方法
 		if method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
+			return
 		}
 		// 处理请求
 		c.Next()
@@ -54,6 +55,7 @@ func CorsByRules() gin.HandlerFunc {
 			// 非严格白名单模式，无论是否通过检查均放行所有 OPTIONS 方法
 			if c.Request.Method == "OPTIONS" {
 				c.AbortWithStatus(http.StatusNoContent)
+				return
 			}
 		}
 

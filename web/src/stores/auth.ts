@@ -1,6 +1,5 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
-import ApiService from "@/core/services/ApiService";
 import JwtService from "@/core/services/JwtService";
 import service from "@/utils/request"
 
@@ -27,7 +26,7 @@ export interface User {
 export const useAuthStore = defineStore("auth", () => {
   const errors = ref({});
   const user = ref<UserData>({} as UserData);
-  const isAuthenticated = ref(!!JwtService.getToken());
+  const isAuthenticated = ref(JwtService.isTokenValid());
 
   function setAuth(authUser: UserData) {
     isAuthenticated.value = true;
@@ -56,8 +55,8 @@ export const useAuthStore = defineStore("auth", () => {
       }
       setAuth(data)
     })
-    .catch(({ response}) => {
-      setError(response.data.errors);
+	.catch((error: any) => {
+	  setError({ login: error?.response?.data?.msg || error?.message || "登录失败" });
     })
   }
 
@@ -65,39 +64,9 @@ export const useAuthStore = defineStore("auth", () => {
     purgeAuth();
   }
 
-  function register(credentials: User) {
-    return ApiService.post("register", credentials)
-      .then(({ data }) => {
-        setAuth(data);
-      })
-      .catch(({ response }) => {
-        setError(response.data.errors);
-      });
-  }
-
-  function forgotPassword(email: string) {
-    return ApiService.post("forgot_password", email)
-      .then(() => {
-        setError({});
-      })
-      .catch(({ response }) => {
-        setError(response.data.errors);
-      });
-  }
-
   function verifyAuth() {
-    // if (JwtService.getToken()) {
-    //   service.post("verify_token", { token: JwtService.getToken() })
-    //     .then(({ data }) => {
-    //       setAuth(data);
-    //     })
-    //     .catch(({ response }) => {
-    //       setError(response.data.errors);
-    //       purgeAuth();
-    //     });
-    // } else {
-    //   purgeAuth();
-    // }
+	  isAuthenticated.value = JwtService.isTokenValid();
+	  if (!isAuthenticated.value) JwtService.destroyToken();
   }
 
   return {
@@ -106,8 +75,6 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     login,
     logout,
-    register,
-    forgotPassword,
     verifyAuth,
   };
 });

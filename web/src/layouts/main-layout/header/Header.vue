@@ -28,12 +28,8 @@
         <!--end::Aside mobile toggle-->
 
         <!--begin::Logo-->
-        <router-link to="/dashboard" class="d-flex align-items-center">
-          <img
-            alt="Logo"
-            :src="getAssetPath('/media/logos/demo3.svg')"
-            class="h-20px"
-          />
+        <router-link :to="{ name: 'blog-home' }" class="studio-logo studio-logo-mobile" aria-label="返回博客首页">
+          studio.
         </router-link>
         <!--end::Logo-->
       </div>
@@ -46,7 +42,7 @@
       >
         <!--begin::Navbar-->
         <div class="d-flex align-items-stretch" id="kt_header_nav">
-          <KTMenu></KTMenu>
+          <KTMenu v-if="authStore.isAuthenticated"></KTMenu>
         </div>
         <!--end::Navbar-->
 
@@ -69,6 +65,7 @@ import { defineComponent, computed } from "vue";
 import KTTopbar from "@/layouts/main-layout/header/Topbar.vue";
 import PageTitle from "@/layouts/main-layout/page-title/PageTitle.vue";
 import KTMenu from "@/layouts/main-layout/header/Menu.vue";
+import { useAuthStore } from "@/stores/auth";
 
 import {
   headerWidthFluid,
@@ -86,6 +83,7 @@ export default defineComponent({
     PageTitle,
   },
   setup() {
+	const authStore = useAuthStore();
     const isHeaderSticky = computed(() => {
       if (window.innerWidth > 768) {
         return headerFixed.value;
@@ -100,7 +98,19 @@ export default defineComponent({
       asideDisplay,
       isHeaderSticky,
       getAssetPath,
+	  authStore,
     };
   },
 });
 </script>
+
+<style scoped>
+.studio-logo-mobile {
+  color: #181c32;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -.05em;
+}
+
+[data-theme="dark"] .studio-logo-mobile { color: #fff; }
+</style>

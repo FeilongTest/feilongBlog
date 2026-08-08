@@ -13,6 +13,8 @@ import (
 
 func Routers() *gin.Engine {
 	Router := gin.Default()
+	Router.MaxMultipartMemory = 10 << 20
+	Router.Use(middleware.CorsByRules())
 	blogRouter := router.RouterGroupApp.Blog
 
 	// 跨域，如需跨域可以打开下面的注释
@@ -42,6 +44,7 @@ func Routers() *gin.Engine {
 		blogRouter.InitArticleRouter(PrivateGroup)
 		blogRouter.InitCommentRouter(PrivateGroup)
 		blogRouter.InitFriendlinkRouter(PrivateGroup)
+		blogRouter.InitStatisticRouter(PrivateGroup)
 	}
 	global.BLOG_LOG.Info("router register success")
 	return Router

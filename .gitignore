@@ -1,0 +1,6 @@
+.idea/
+server/config.yaml
+server/config.production.yaml
+server/log/
+server/uploads/
+web/dist/

@@ -13,7 +13,7 @@
       data-bs-trigger="hover"
     >
       <i class="bi bi-link-45deg fs-4"></i>
-      <span id="kt_engage_demos_label">友情链接</span>
+      <span>友情链接</span>
     </button>
     <!--end::Links drawer toggle-->
 

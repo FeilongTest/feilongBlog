@@ -64,5 +64,8 @@ func Viper(path ...string) *viper.Viper {
 	if err = v.Unmarshal(&global.BLOG_CONFIG); err != nil {
 		fmt.Println(err)
 	}
+	if err = global.BLOG_CONFIG.Validate(); err != nil {
+		panic(err)
+	}
 	return v
 }

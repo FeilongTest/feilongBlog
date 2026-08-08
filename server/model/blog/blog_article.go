@@ -20,6 +20,19 @@ type Article struct {
 	Status       int       `json:"status" gorm:"status;column:status;comment:状态"`
 	Comment      []Comment `json:"comment" gorm:"foreignKey:Aid;references:ID;comment:评论"`
 	CommentCount int       `json:"commentCount" gorm:"-"` // 评论数量，不存储在数据库
+	LikeCount    int       `json:"likeCount" gorm:"-"`    // 点赞数量，不存储在数据库
+}
+
+type ArticleLike struct {
+	ID        uint   `gorm:"primarykey"`
+	Aid       uint   `json:"aid" gorm:"uniqueIndex:idx_article_visitor"`
+	VisitorID string `json:"visitorId" gorm:"size:64;uniqueIndex:idx_article_visitor"`
+	Ctime     int    `json:"ctime"`
+}
+
+type ArticleLikeRequest struct {
+	Aid       uint   `json:"aid"`
+	VisitorID string `json:"visitorId"`
 }
 
 type ArticleSearch struct {
@@ -32,4 +45,8 @@ type ArticleSearch struct {
 
 func (Article) TableName() string {
 	return "blog_article"
+}
+
+func (ArticleLike) TableName() string {
+	return "blog_article_like"
 }

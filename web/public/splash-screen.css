@@ -30,10 +30,13 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-.page-loading .splash-screen img {
+.page-loading .splash-screen .splash-brand {
     margin-left: calc(100vw - 100%);
-    margin-bottom: 30px;
-    height: 30px !important;
+    margin-bottom: 22px;
+    color: #181c32;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
 }
 
 [data-theme="dark"] .splash-screen {
@@ -43,4 +46,8 @@ body {
 
 [data-theme="dark"] .splash-screen span {
     color: #92929F;
+}
+
+[data-theme="dark"] .splash-screen .splash-brand {
+    color: #ffffff;
 }

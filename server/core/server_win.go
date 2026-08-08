@@ -12,10 +12,12 @@ import (
 
 func initServer(address string, router *gin.Engine) server {
 	return &http.Server{
-		Addr:           address,
-		Handler:        router,
-		ReadTimeout:    20 * time.Second,
-		WriteTimeout:   20 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:              address,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 }

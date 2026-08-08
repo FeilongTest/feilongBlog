@@ -21,6 +21,9 @@ func RegisterTables(db *gorm.DB) {
 	err := db.AutoMigrate(
 		// 系统模块表
 		blog.User{},
+		blog.ArticleLike{},
+		blog.BlogStatistic{},
+		blog.BlogVisitor{},
 	)
 	if err != nil {
 		global.BLOG_LOG.Error("register table failed", zap.Error(err))

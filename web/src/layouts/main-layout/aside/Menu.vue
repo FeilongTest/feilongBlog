@@ -1,22 +1,22 @@
 <template>
   <!--begin::Menu wrapper-->
-  <div id="kt_aside_menu_wrapper" ref="scrollElRef" class="w-100 hover-scroll-overlay-y d-flex pe-2" data-kt-scroll="true"
+  <div id="kt_aside_menu_wrapper" ref="scrollElRef" class="w-100 h-100 hover-scroll-overlay-y d-flex pe-2" data-kt-scroll="true"
     data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-height="auto"
     data-kt-scroll-dependencies="#kt_aside_logo, #kt_aside_footer"
     data-kt-scroll-wrappers="#kt_aside, #kt_aside_menu, #kt_aside_menu_wrapper" data-kt-scroll-offset="100">
     <!--begin::Menu-->
-    <div class="menu menu-column menu-rounded menu-sub-indention menu-active-bg fw-semibold my-auto" id="#kt_aside_menu"
+    <div class="menu menu-column menu-rounded menu-sub-indention menu-active-bg fw-semibold my-auto w-100" id="kt_aside_menu"
       data-kt-menu="true">
 
-      <div class="menu-item" data-kt-menu-sub="accordion" data-kt-menu-trigger="click">
-        <span class="menu-link" active-class="active" @click="goBlogHome">
+      <div class="menu-item">
+        <router-link :to="{ name: 'blog-home' }" class="menu-link" active-class="active">
           <span class="menu-icon">
             <span class="svg-icon svg-icon-5">
               <inline-svg :src="getAssetPath('/media/icons/duotune/arrows/arr001.svg')" />
             </span>
           </span>
           <span class="menu-title">首页</span>
-        </span>
+        </router-link>
       </div>
 
       <template v-for="(item, i) in category" :key="i">
@@ -56,11 +56,12 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { defineComponent, nextTick, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { asideMenuIcons } from "@/core/helpers/config";
 import service from "@/utils/request";
 import type { CategoryList } from "@/core/blog/CategoryTypes"
+import { MenuComponent } from "@/assets/ts/components/MenuComponent";
 
 
 export default defineComponent({
@@ -68,7 +69,6 @@ export default defineComponent({
   components: {},
   setup() {
     const route = useRoute();
-    const router = useRouter();
     const scrollElRef = ref<null | HTMLElement>(null);
     const category = ref<Array<CategoryList>>([])
 
@@ -88,19 +88,6 @@ export default defineComponent({
           console.log(err)
         })
     }
-
-    watch(
-      () => router.currentRoute.value,
-      (newValue: any, oldValue: any) => {
-        if (newValue.name == "blog-content") {
-          //为了解决暂时强制刷新
-          if (oldValue.params.fid != newValue.params.fid && oldValue.params.fid != undefined) {
-            // location.reload();
-            router.go(0)
-          }
-        }
-      },
-    )
 
     //重写是否拥有激活的子元素判断条件
     const hasActiveChildren = (match: number) => {
@@ -123,12 +110,25 @@ export default defineComponent({
       return false;
     }
 
-    const goBlogHome = () => {
-      setTimeout(()=>{
-        router.replace("/index")
-        // router.replace("/category/0")
-      },0)//设置一点点延迟去帮助手风琴菜单加载动画
-    }
+    const collapseAccordions = () => {
+      const menuElement = document.getElementById("kt_aside_menu");
+      if (!menuElement) return;
+      const menu = MenuComponent.getInstance(menuElement);
+      menuElement.querySelectorAll<HTMLElement>(".menu-item.show[data-kt-menu-trigger]")
+        .forEach((item) => menu?.hide(item));
+    };
+
+    watch(() => route.name, async (routeName) => {
+      if (routeName === "blog-home") {
+        collapseAccordions();
+        return;
+      }
+      if (routeName === "category") {
+        await nextTick();
+        document.querySelectorAll<HTMLElement>("#kt_aside_menu .menu-item.menu-accordion.show > .menu-sub")
+          .forEach((subMenu) => subMenu.removeAttribute("style"));
+      }
+    }, { flush: "sync" });
 
     return {
       category,
@@ -136,7 +136,6 @@ export default defineComponent({
       hasActiveSubChildren,
       asideMenuIcons,
       getAssetPath,
-      goBlogHome,
     };
   },
 });

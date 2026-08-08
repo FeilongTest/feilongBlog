@@ -4,6 +4,7 @@ import (
 	"feilongBlog/global"
 	"feilongBlog/model/blog"
 	"feilongBlog/model/common/response"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,10 @@ func (c *CommentApi) GetCommentList(ctx *gin.Context) {
 	err := ctx.ShouldBindQuery(&comment)
 	if err != nil {
 		response.FailWithMessage(err.Error(), ctx)
+		return
+	}
+	if comment.Aid <= 0 {
+		response.FailWithMessage("文章 ID 不合法", ctx)
 		return
 	}
 
@@ -42,10 +47,17 @@ func (c *CommentApi) CreateComment(ctx *gin.Context) {
 		response.FailWithMessage(err.Error(), ctx)
 		return
 	}
+	comment.Name = strings.TrimSpace(comment.Name)
+	comment.Email = strings.TrimSpace(comment.Email)
+	comment.Content = strings.TrimSpace(comment.Content)
+	if comment.Aid <= 0 || comment.Name == "" || len(comment.Name) > 50 || comment.Email == "" || len(comment.Email) > 254 || comment.Content == "" || len(comment.Content) > 1000 {
+		response.FailWithMessage("评论参数不合法", ctx)
+		return
+	}
 
 	// 设置创建时间和状态
 	comment.Ctime = int(time.Now().Unix())
-	comment.Status = 0 // 0表示显示/已审核通过
+	comment.Status = 1 // 新评论默认进入待审核状态
 
 	// 创建评论
 	err = global.BLOG_DB.Create(&comment).Error

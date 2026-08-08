@@ -22,4 +22,15 @@ export const destroyToken = (): void => {
   window.localStorage.removeItem(ID_TOKEN_KEY);
 };
 
-export default { getToken, saveToken, destroyToken };
+export const isTokenValid = (): boolean => {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.exp === "number" && payload.exp > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+};
+
+export default { getToken, saveToken, destroyToken, isTokenValid };
