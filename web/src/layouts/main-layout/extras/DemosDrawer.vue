@@ -145,25 +145,33 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, ref, onMounted } from "vue";
+import { computed, defineComponent, onBeforeUnmount, onMounted, ref } from "vue";
 import service from "@/utils/request";
 import type { Friendlink } from "@/core/blog/FriendlinkTypes";
+import { useAuthStore } from "@/stores/auth";
 
 export default defineComponent({
   name: "kt-demos-drawer",
   setup() {
     const friendLinks = ref<Friendlink[]>([]);
     const loading = ref(false);
-    const contactEmail = ref("");
+    const loaded = ref(false);
+    const authStore = useAuthStore();
+    const contactEmail = computed(() => authStore.publicProfile?.email || "");
 
     // 获取友情链接列表
     const getFriendlinks = async () => {
+      if (loaded.value || loading.value) return;
       loading.value = true;
       try {
-        const res: any = await service.get("/base/getAllFriendlinks");
+        const [res] = await Promise.all([
+          service.get("/base/getAllFriendlinks"),
+          authStore.refreshPublicProfile().catch(() => undefined),
+        ]) as [any, unknown];
         if (res && res.data && Array.isArray(res.data)) {
           friendLinks.value = res.data;
         }
+        loaded.value = true;
       } catch (error) {
         console.error("获取友链失败:", error);
       } finally {
@@ -171,18 +179,14 @@ export default defineComponent({
       }
     };
 
-    const getContact = async () => {
-      try {
-        const res: any = await service.get("/base/getContact");
-        contactEmail.value = res?.data?.email || "";
-      } catch {
-        contactEmail.value = "";
-      }
-    };
+    const handleDrawerOpen = () => getFriendlinks();
 
     onMounted(() => {
-      getFriendlinks();
-      getContact();
+      document.getElementById("kt_engage_demos_toggle")?.addEventListener("click", handleDrawerOpen);
+    });
+
+    onBeforeUnmount(() => {
+      document.getElementById("kt_engage_demos_toggle")?.removeEventListener("click", handleDrawerOpen);
     });
 
     return {

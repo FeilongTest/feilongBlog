@@ -51,7 +51,6 @@ export default defineComponent({
     });
 
     onMounted(() => {
-      recordVisit(router.currentRoute.value.path);
       nextTick(() => {
         initializeComponents();
 

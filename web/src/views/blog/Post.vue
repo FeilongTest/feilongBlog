@@ -1,5 +1,15 @@
 <template>
-  <div class="card">
+  <PostSkeleton v-if="loading" />
+  <div v-else-if="loadError" class="card py-15 text-center post-loaded">
+    <div class="card-body">
+      <i class="bi bi-cloud-slash fs-3x text-gray-300"></i>
+      <h3 class="mt-5">文章加载失败</h3>
+      <p class="text-muted">网络可能暂时不可用，请稍后重试。</p>
+      <button type="button" class="btn btn-sm btn-light-primary me-3" @click="retryArticle">重新加载</button>
+      <router-link :to="{ name: 'blog-home' }" class="btn btn-sm btn-light">返回首页</router-link>
+    </div>
+  </div>
+  <div v-else class="card post-loaded">
     <div class="card-body p-lg-20 pb-lg-0">
       <div class="d-flex flex-column flex-xl-row">
         <div class="flex-lg-row-fluid me-xl-15">
@@ -86,26 +96,42 @@
 
           <div class="mb-16">
             <h4 class="text-dark mb-7">相关分类</h4>
-            <div v-for="item in articleSummary" :key="item.fid" class="d-flex flex-stack fw-semibold fs-5 text-muted mb-4">
-              <router-link class="text-muted text-hover-primary pe-2" :to="{ name: 'category', params: { id: item.fid } }">
-                <span class="badge badge-light-warning fw-bold my-2 me-3">推荐板块</span>{{ item.name }}
-              </router-link>
-              <div>共 <span class="badge badge-light-info fw-bold my-2">{{ item.total }}</span> 篇</div>
+            <div v-if="summaryLoading" class="placeholder-glow" aria-label="正在加载相关分类">
+              <span v-for="item in 3" :key="item" class="placeholder col-12 d-block mb-5"></span>
             </div>
+            <template v-else>
+              <div v-for="item in articleSummary" :key="item.fid" class="d-flex flex-stack fw-semibold fs-5 text-muted mb-4 sidebar-results">
+                <router-link class="text-muted text-hover-primary pe-2" :to="{ name: 'category', params: { id: item.fid } }">
+                  <span class="badge badge-light-warning fw-bold my-2 me-3">推荐板块</span>{{ item.name }}
+                </router-link>
+                <div>共 <span class="badge badge-light-info fw-bold my-2">{{ item.total }}</span> 篇</div>
+              </div>
+            </template>
           </div>
 
           <div>
             <h4 class="text-dark mb-7">最新发布</h4>
-            <div v-for="item in articleList" :key="item.ID" class="d-flex mb-7">
-              <div class="symbol symbol-60px symbol-2by3 me-4">
-                <div class="symbol-label" :style="{ backgroundImage: `url(${item.pic})` }"></div>
-              </div>
-              <div class="align-self-center">
-                <span class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link" @click="gotoContent(item)">
-                  {{ item.title }}
-                </span>
+            <div v-if="latestLoading" class="placeholder-glow" aria-label="正在加载最新文章">
+              <div v-for="item in 4" :key="item" class="d-flex align-items-center mb-7">
+                <span class="placeholder rounded latest-image-placeholder me-4"></span>
+                <div class="flex-grow-1">
+                  <span class="placeholder col-12 d-block mb-3"></span>
+                  <span class="placeholder col-7 d-block"></span>
+                </div>
               </div>
             </div>
+            <template v-else>
+              <div v-for="item in articleList" :key="item.ID" class="d-flex mb-7 sidebar-results">
+                <div class="symbol symbol-60px symbol-2by3 me-4">
+                  <div class="symbol-label" :style="{ backgroundImage: `url(${item.pic})` }"></div>
+                </div>
+                <div class="align-self-center">
+                  <span class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link" @click="gotoContent(item)">
+                    {{ item.title }}
+                  </span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -120,8 +146,8 @@ import dayjs from "dayjs";
 import DOMPurify from "dompurify";
 import MarkdownIt from "markdown-it";
 import Prism from "prismjs";
-import Swal from "sweetalert2";
 import CommentSection from "@/components/blog/CommentSection.vue";
+import PostSkeleton from "@/components/blog/PostSkeleton.vue";
 import type { ArticleList, ArticelSummary } from "@/core/blog/ArticleTypes";
 import { getAssetPath } from "@/core/helpers/assets";
 import service from "@/utils/request";
@@ -133,6 +159,11 @@ const articleSummary = ref<ArticelSummary[]>([]);
 const articleList = ref<ArticleList[]>([]);
 const searchKeyword = ref("");
 const contentRef = ref<HTMLElement>();
+const loading = ref(true);
+const loadError = ref(false);
+const summaryLoading = ref(true);
+const latestLoading = ref(true);
+let requestSequence = 0;
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
 const sanitizedContent = computed(() => {
   const source = articleInfo.value.content || "";
@@ -167,35 +198,51 @@ const enhanceCodeBlocks = async () => {
 };
 
 const getSummary = async (fid: number) => {
-  const res: any = await service.post("/base/getSummary", { id: fid });
-  articleSummary.value = res.data || [];
+  summaryLoading.value = true;
+  try {
+    const res: any = await service.post("/base/getSummary", { id: fid });
+    articleSummary.value = res.data || [];
+  } catch {
+    articleSummary.value = [];
+  } finally {
+    summaryLoading.value = false;
+  }
 };
 
 const getArticleList = async () => {
-  const res: any = await service.get("/base/getArticleList", { params: { page: 1, pageSize: 5 } });
-  articleList.value = res.data?.list || [];
+  latestLoading.value = true;
+  try {
+    const res: any = await service.get("/base/getArticleList", { params: { page: 1, pageSize: 5 } });
+    articleList.value = res.data?.list || [];
+  } catch {
+    articleList.value = [];
+  } finally {
+    latestLoading.value = false;
+  }
 };
 
 const getArticle = async (id: number) => {
-  const res: any = await service.post("/base/getArticle", { id });
-  if (res.code === 7) {
-    await Swal.fire({
-      title: "出错了",
-      icon: "error",
-      text: "没有找到文章信息，即将返回首页。",
-      buttonsStyling: false,
-      confirmButtonText: "返回首页",
-      heightAuto: false,
-      customClass: { confirmButton: "btn fw-semibold btn-light-primary" },
-    });
-    await router.push({ name: "blog-home" });
-    return;
+  const sequence = ++requestSequence;
+  loading.value = true;
+  loadError.value = false;
+  try {
+    const res: any = await service.post("/base/getArticle", { id });
+    if (sequence !== requestSequence) return;
+    articleInfo.value = res.data;
+    const appName = import.meta.env.VITE_APP_NAME || "Feilong'S Blog";
+    document.title = `${articleInfo.value.title} - ${appName}`;
+    loading.value = false;
+    await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks()]);
+  } catch {
+    if (sequence === requestSequence) loadError.value = true;
+  } finally {
+    if (sequence === requestSequence) loading.value = false;
   }
+};
 
-  articleInfo.value = res.data;
-  const appName = import.meta.env.VITE_APP_NAME || "Feilong'S Blog";
-  document.title = `${articleInfo.value.title} - ${appName}`;
-  await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks()]);
+const retryArticle = () => {
+  const articleId = Number(route.params.id);
+  if (articleId) getArticle(articleId);
 };
 
 const gotoContent = (article: ArticleList) => {
@@ -226,6 +273,14 @@ getArticleList();
 
 <style scoped lang="scss">
 .article-link { cursor: pointer; }
+.post-loaded { animation: content-enter .28s ease-out; }
+.placeholder { background-color: var(--kt-gray-300); }
+.latest-image-placeholder { width: 60px; height: 80px; flex: 0 0 60px; }
+.sidebar-results { animation: content-enter .24s ease-out; }
+@keyframes content-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .article-content {
   color: var(--kt-text-gray-700);
@@ -348,5 +403,9 @@ getArticleList();
 @media (max-width: 767.98px) {
   .article-content { font-size: 15px; line-height: 1.85; }
   .article-content :deep(pre) { padding: 1rem 3.2rem 1rem 1rem; font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-loaded, .sidebar-results { animation: none; }
 }
 </style>

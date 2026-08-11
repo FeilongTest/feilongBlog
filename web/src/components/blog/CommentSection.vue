@@ -9,7 +9,23 @@
     </div>
 
     <!-- 评论列表 -->
-    <div v-if="comments.length > 0" class="mb-10">
+    <div v-if="loading" class="mb-10 placeholder-glow" aria-label="正在加载评论">
+      <div v-for="item in 2" :key="item" class="card mb-5 shadow-sm">
+        <div class="card-body p-6">
+          <div class="d-flex align-items-center mb-4">
+            <span class="placeholder rounded-circle comment-avatar me-4"></span>
+            <div class="flex-grow-1">
+              <span class="placeholder col-3 d-block mb-3"></span>
+              <span class="placeholder col-2 d-block"></span>
+            </div>
+          </div>
+          <span class="placeholder col-10 d-block mb-3"></span>
+          <span class="placeholder col-7 d-block"></span>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="comments.length > 0" class="mb-10 comment-results">
       <div
         v-for="comment in comments"
         :key="comment.ID"
@@ -138,6 +154,7 @@ const props = defineProps<{
 
 // 响应式数据
 const comments = ref<Comment[]>([]);
+const loading = ref(true);
 const submitting = ref(false);
 const formData = ref<CommentFormData>({
   name: "",
@@ -148,21 +165,20 @@ const formData = ref<CommentFormData>({
 
 // 获取评论列表
 const getComments = async () => {
+  loading.value = true;
   try {
-    console.log("请求评论列表，文章ID:", props.articleId);
     const res: any = await service.get("/base/getCommentList", {
       params: {
         aid: props.articleId,
       },
     });
-    // axios拦截器返回 response.data，即 {code: 0, data: [...], msg: "..."}
-    console.log("评论API返回:", res);
     if (res && res.data && Array.isArray(res.data)) {
       comments.value = res.data;
-      console.log("评论列表长度:", comments.value.length);
     }
   } catch (error) {
     console.error("获取评论失败:", error);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -265,6 +281,18 @@ onMounted(() => {
 <style scoped>
 .hover-elevate-up {
   transition: all 0.3s ease;
+}
+
+.placeholder { background-color: var(--kt-gray-300); }
+.comment-avatar { width: 45px; height: 45px; flex: 0 0 45px; }
+.comment-results { animation: comment-enter .24s ease-out; }
+@keyframes comment-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-results { animation: none; }
 }
 
 .hover-elevate-up:hover {

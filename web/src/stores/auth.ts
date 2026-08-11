@@ -30,6 +30,8 @@ export interface PublicProfile {
   bio:string;
 }
 
+let publicProfileRequest: Promise<PublicProfile> | null = null;
+
 
 export const useAuthStore = defineStore("auth", () => {
   const errors = ref({});
@@ -86,9 +88,20 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function refreshPublicProfile() {
-    const { data } = await service.get("/base/getContact");
-    publicProfile.value = data || {};
-    return publicProfile.value;
+    if (publicProfile.value?.email || publicProfile.value?.bio || publicProfile.value?.pic) {
+      return publicProfile.value;
+    }
+    if (!publicProfileRequest) {
+      publicProfileRequest = service.get("/base/getContact")
+        .then(({ data }) => {
+          publicProfile.value = data || {};
+          return publicProfile.value;
+        })
+        .finally(() => {
+          publicProfileRequest = null;
+        });
+    }
+    return publicProfileRequest;
   }
 
   function verifyAuth() {

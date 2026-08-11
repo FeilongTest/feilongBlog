@@ -8,14 +8,20 @@
         </span>
         <div>
           <div class="fw-bold text-gray-900">“{{ keyword }}”的搜索结果</div>
-          <div class="text-muted fs-7">找到 {{ total }} 篇文章</div>
+          <div class="text-muted fs-7">{{ loading ? "正在搜索…" : `找到 ${total} 篇文章` }}</div>
         </div>
       </div>
       <button type="button" class="btn btn-sm btn-light-primary" @click="clearSearch">清除搜索</button>
     </div>
   </div>
 
-  <div v-if="articleList.length" class="row g-5 g-xl-8">
+  <div v-if="loading" class="row g-5 g-xl-8" aria-label="正在加载文章">
+    <div v-for="column in 2" :key="column" class="col-xl-6">
+      <BlogFeedSkeleton v-for="item in 3" :key="item" class="mb-5 mb-xl-8" />
+    </div>
+  </div>
+
+  <div v-else-if="articleList.length" class="row g-5 g-xl-8 feed-results">
     <div class="col-xl-6">
       <BlogFeeds v-for="article in leftColumn" :key="article.ID" class="mb-5 mb-xl-8" :article="article" />
     </div>
@@ -24,7 +30,7 @@
     </div>
   </div>
 
-  <div v-else class="card py-15 text-center">
+  <div v-else class="card py-15 text-center feed-results">
     <div class="card-body">
       <i class="bi bi-search fs-3x text-gray-300"></i>
       <h3 class="mt-5">没有找到相关文章</h3>
@@ -32,7 +38,7 @@
     </div>
   </div>
 
-  <div class="d-flex flex-stack flex-wrap gap-4 pt-5">
+  <div v-if="!loading" class="d-flex flex-stack flex-wrap gap-4 pt-5 feed-results">
     <div class="fs-6 fw-semibold text-gray-600">共 {{ total }} 篇文章</div>
     <TablePagination v-if="total > pageSize" :total-pages="Math.ceil(total / pageSize)" :total="total"
       :per-page="pageSize" :current-page="page" @page-change="pageChange" />
@@ -43,6 +49,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import BlogFeeds from "@/components/blog/BlogFeeds.vue";
+import BlogFeedSkeleton from "@/components/blog/BlogFeedSkeleton.vue";
 import TablePagination from "@/components/kt-datatable/table-partials/table-content/table-footer/TablePagination.vue";
 import type { ArticleList } from "@/core/blog/ArticleTypes";
 import { getAssetPath } from "@/core/helpers/assets";
@@ -54,6 +61,8 @@ const pageSize = ref(10);
 const articleList = ref<ArticleList[]>([]);
 const fid = ref(0);
 const keyword = ref("");
+const loading = ref(true);
+let requestSequence = 0;
 const router = useRouter();
 
 const leftColumn = computed(() => articleList.value.filter((_, index) => index % 2 === 0));
@@ -66,11 +75,18 @@ const syncRoute = () => {
 };
 
 const getArticleList = async () => {
-  const { data } = await service.get("/base/getArticleList", {
-    params: { page: page.value, pageSize: pageSize.value, fid: fid.value, keyword: keyword.value || undefined },
-  });
-  total.value = data?.total || 0;
-  articleList.value = data?.list || [];
+  const sequence = ++requestSequence;
+  loading.value = true;
+  try {
+    const { data } = await service.get("/base/getArticleList", {
+      params: { page: page.value, pageSize: pageSize.value, fid: fid.value, keyword: keyword.value || undefined },
+    });
+    if (sequence !== requestSequence) return;
+    total.value = data?.total || 0;
+    articleList.value = data?.list || [];
+  } finally {
+    if (sequence === requestSequence) loading.value = false;
+  }
 };
 
 const clearSearch = () => router.push({ name: "blog-home" });
@@ -92,3 +108,14 @@ watch(() => router.currentRoute.value.fullPath, () => {
   getArticleList();
 });
 </script>
+
+<style scoped>
+.feed-results { animation: content-enter .28s ease-out; }
+@keyframes content-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-results { animation: none; }
+}
+</style>
