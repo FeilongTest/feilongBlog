@@ -18,7 +18,10 @@
 - 一级、二级分类导航
 - 标题搜索与分页
 - 文章详情和评论
+- 文章目录、阅读进度与正文图片点击放大
+- 相关文章与热门文章推荐
 - 基于访客标识的点赞功能
+- RSS 订阅
 - 响应式布局与深色模式
 
 ### 管理后台
@@ -440,6 +443,7 @@ npm run build
 - **HTML5 history 路由**：文章地址形如 `/content/1/2`，旧的 `/#/xxx` 链接会自动跳转到新地址。
 - **服务端渲染页面信息**：后端读取前端构建产物注入 `title`、`description`、`canonical`、Open Graph、Twitter 卡片与 JSON-LD（`WebSite`、`BlogPosting`、`BreadcrumbList`、`CollectionPage`），并把文章正文或列表内容直接写入 HTML，不执行 JavaScript 的爬虫同样能读到完整内容。
 - **动态站点地图**：`/sitemap.xml` 按数据库内容生成，文章或分类变化后自动刷新缓存。
+- **RSS 订阅**：`/rss.xml` 输出最新 20 篇文章的完整正文，首页 head 中包含订阅发现链接。
 - **爬虫规则**：`/robots.txt` 屏蔽后台与接口前缀，并声明站点地图地址。
 - **主动推送**：发布或更新文章后自动推送到 IndexNow（Bing、Yandex 等）与百度普通收录。
 
