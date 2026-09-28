@@ -4,3 +4,11 @@ server/config.production.yaml
 server/log/
 server/uploads/
 web/dist/
+
+# 本地交接文档（包含服务器运维细节，不进入版本库）
+HANDOFF.md
+
+# 本地构建产物
+blog-server-*
+web-dist.tar
+*.upx
