@@ -182,7 +182,7 @@ func (s *SeoService) websiteJsonLd(setting model.Setting) map[string]any {
 	if siteURL != "" {
 		data["potentialAction"] = map[string]any{
 			"@type":       "SearchAction",
-			"target":      siteURL + "/index?keyword={search_term_string}",
+			"target":      siteURL + "/?keyword={search_term_string}",
 			"query-input": "required name=search_term_string",
 		}
 	}

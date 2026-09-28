@@ -46,6 +46,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # 旧的首页地址永久跳转到根路径
+    location = /index {
+        return 301 https://blog.example.com/$is_args$args;
+    }
+
     # 首页交给后端注入页面信息
     location = / {
         proxy_pass http://127.0.0.1:8889/;

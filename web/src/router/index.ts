@@ -10,8 +10,9 @@ import JwtService from "@/core/services/JwtService";
 
 const routes: Array<RouteRecordRaw> = [
   {
-    path: "/",
-    redirect: "/index",
+    // 首页统一使用根路径，旧地址永久跳转
+    path: "/index",
+    redirect: "/",
   },
   {
     path: "/admin",
@@ -103,7 +104,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("@/layouts/main-layout/MainLayout.vue"),
     children: [
       {
-        path: "index",
+        path: "",
         name: "blog-home",
         component: () =>
           import("@/views/blog/Feeds.vue"),
@@ -197,16 +198,7 @@ router.beforeEach((to) => {
 	authStore.isAuthenticated = authenticated;
 	if (!authenticated) JwtService.destroyToken();
 
-  // 如果访问根路径"/"，根据登录状态重定向
-  if (to.path === "/") {
-    if (authStore.isAuthenticated) {
-      // 已登录，跳转到后台
-      return { name: "dashboard" };
-    } else {
-      // 未登录，跳转到前台首页
-      return { name: "blog-home" };
-    }
-  }
+  // 根路径"/"就是博客首页，管理员通过菜单进入后台
 
   // current page view title
   const siteStore = useSiteStore();

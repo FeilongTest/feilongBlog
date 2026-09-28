@@ -50,7 +50,7 @@
       <div class="card h-100 admin-welcome overflow-hidden">
         <div class="card-body p-8 position-relative">
           <div class="welcome-circle"></div><span class="badge badge-light-primary mb-5">BLOG CONSOLE</span><h2 class="fw-bolder text-gray-900 mb-3">欢迎回来</h2><p class="text-gray-600 lh-lg mb-8">内容、评论和对象存储都可以从这里统一管理。</p>
-          <div class="d-grid gap-3"><router-link to="/admin/article/content" class="btn btn-primary"><i class="bi bi-pencil-square me-2"></i>撰写新文章</router-link><router-link to="/index" class="btn btn-light-primary"><i class="bi bi-box-arrow-up-right me-2"></i>查看博客首页</router-link></div>
+          <div class="d-grid gap-3"><router-link to="/admin/article/content" class="btn btn-primary"><i class="bi bi-pencil-square me-2"></i>撰写新文章</router-link><router-link to="/" class="btn btn-light-primary"><i class="bi bi-box-arrow-up-right me-2"></i>查看博客首页</router-link></div>
         </div>
       </div>
     </div>
@@ -81,7 +81,7 @@ const statCards=computed(()=>[
 ]);
 const maxPv=computed(()=>Math.max(1,...stats.value.trend.map(item=>item.pv)));
 const quickActions=[
-  {label:'文章管理',icon:'bi bi-file-text',color:'primary',to:'/admin/article/index'}, {label:'新建文章',icon:'bi bi-plus-circle',color:'success',to:'/admin/article/content'}, {label:'分类管理',icon:'bi bi-folder',color:'info',to:'/admin/category'}, {label:'评论审核',icon:'bi bi-chat-dots',color:'warning',to:'/admin/comment'}, {label:'友情链接',icon:'bi bi-link',color:'danger',to:'/admin/friendlink'}, {label:'博客首页',icon:'bi bi-house',color:'dark',to:'/index'},
+  {label:'文章管理',icon:'bi bi-file-text',color:'primary',to:'/admin/article/index'}, {label:'新建文章',icon:'bi bi-plus-circle',color:'success',to:'/admin/article/content'}, {label:'分类管理',icon:'bi bi-folder',color:'info',to:'/admin/category'}, {label:'评论审核',icon:'bi bi-chat-dots',color:'warning',to:'/admin/comment'}, {label:'友情链接',icon:'bi bi-link',color:'danger',to:'/admin/friendlink'}, {label:'博客首页',icon:'bi bi-house',color:'dark',to:'/'},
 ];
 
 onMounted(async()=>{

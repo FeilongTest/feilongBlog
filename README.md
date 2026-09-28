@@ -5,7 +5,7 @@
 ## 在线预览
 
 - 博客地址：[https://teshh.com](https://teshh.com)
-- 后台入口：[https://teshh.com/#/sign-in](https://teshh.com/#/sign-in)
+- 后台入口：[https://teshh.com/sign-in](https://teshh.com/sign-in)
 
 > 后台需要管理员账号，项目不提供公开测试账号。
 
