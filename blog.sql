@@ -151,6 +151,35 @@ CREATE TABLE `blog_visitor` (
 -- Table structure for blog_site
 -- ----------------------------
 DROP TABLE IF EXISTS `blog_site`;
+-- ----------------------------
+-- Table structure for blog_setting
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_setting`;
+CREATE TABLE `blog_setting` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `site_name` varchar(60) NOT NULL DEFAULT '' COMMENT '站点名称',
+  `site_slogan` varchar(120) NOT NULL DEFAULT '' COMMENT '站点副标题',
+  `description` varchar(200) NOT NULL DEFAULT '' COMMENT '站点描述',
+  `keywords` varchar(200) NOT NULL DEFAULT '' COMMENT '站点关键词',
+  `author` varchar(60) NOT NULL DEFAULT '' COMMENT '作者',
+  `icp` varchar(80) NOT NULL DEFAULT '' COMMENT '备案信息',
+  `baidu_verify` varchar(120) NOT NULL DEFAULT '' COMMENT '百度站长平台验证码',
+  `google_verify` varchar(120) NOT NULL DEFAULT '' COMMENT 'Google搜索控制台验证码',
+  `bing_verify` varchar(120) NOT NULL DEFAULT '' COMMENT 'Bing网站管理员验证码',
+  `ctime` int(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `edittime` int(11) NOT NULL DEFAULT '0' COMMENT '编辑时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='站点设置';
+
+-- ----------------------------
+-- Records of blog_setting
+-- ----------------------------
+INSERT INTO `blog_setting` (`id`, `site_name`, `site_slogan`, `description`, `keywords`, `author`, `ctime`, `edittime`) VALUES
+(1, '飞龙博客', '记录技术与生活', '一个分享编程技术、折腾经验与日常记录的个人博客。', '个人博客,技术博客,编程,Go,Vue', '飞龙', UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+
+-- ----------------------------
+-- Table structure for blog_site
+-- ----------------------------
 CREATE TABLE `blog_site` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
   `title` varchar(200) NOT NULL COMMENT '网站标题',

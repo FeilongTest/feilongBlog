@@ -48,6 +48,57 @@ body {
     color: #92929F;
 }
 
+/* 服务端直出的文章内容，脚本加载完成后会被 Vue 应用替换 */
+.seo-prerender {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    color: #3F4254;
+    line-height: 1.8;
+    word-break: break-word;
+}
+
+.seo-prerender h1 {
+    font-size: 28px;
+    line-height: 1.4;
+    margin: 0 0 12px;
+}
+
+.seo-prerender h2 {
+    font-size: 18px;
+    margin: 0 0 6px;
+}
+
+.seo-prerender a {
+    color: #009EF7;
+    text-decoration: none;
+}
+
+.seo-prerender time {
+    display: block;
+    font-size: 13px;
+    color: #A1A5B7;
+    margin-bottom: 6px;
+}
+
+.seo-prerender ul {
+    padding-left: 20px;
+}
+
+.seo-prerender li {
+    margin-bottom: 18px;
+}
+
+.seo-prerender img {
+    max-width: 100%;
+    height: auto;
+}
+
+[data-theme="dark"] .seo-prerender {
+    color: #B5B5C3;
+}
+
 [data-theme="dark"] .splash-screen .splash-brand {
     color: #ffffff;
 }

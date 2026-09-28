@@ -24,6 +24,7 @@ func RegisterTables(db *gorm.DB) {
 		blog.ArticleLike{},
 		blog.BlogStatistic{},
 		blog.BlogVisitor{},
+		blog.Setting{},
 	)
 	if err != nil {
 		global.BLOG_LOG.Error("register table failed", zap.Error(err))

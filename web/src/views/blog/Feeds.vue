@@ -52,7 +52,9 @@ import BlogFeeds from "@/components/blog/BlogFeeds.vue";
 import BlogFeedSkeleton from "@/components/blog/BlogFeedSkeleton.vue";
 import TablePagination from "@/components/kt-datatable/table-partials/table-content/table-footer/TablePagination.vue";
 import type { ArticleList } from "@/core/blog/ArticleTypes";
+import { absoluteUrl, applySeo } from "@/core/seo";
 import { getAssetPath } from "@/core/helpers/assets";
+import { useSiteStore } from "@/stores/site";
 import service from "@/utils/request";
 
 const page = ref(1);
@@ -64,6 +66,7 @@ const keyword = ref("");
 const loading = ref(true);
 let requestSequence = 0;
 const router = useRouter();
+const siteStore = useSiteStore();
 
 const leftColumn = computed(() => articleList.value.filter((_, index) => index % 2 === 0));
 const rightColumn = computed(() => articleList.value.filter((_, index) => index % 2 === 1));
@@ -72,6 +75,66 @@ const syncRoute = () => {
   const route = router.currentRoute.value;
   fid.value = route.name === "category" ? Number(route.params.id) : 0;
   keyword.value = route.query.keyword ? String(route.query.keyword) : "";
+};
+
+// 首页、分类页与搜索结果页各自的 SEO 信息
+const updateSeo = async () => {
+  const site = await siteStore.loadSiteSetting();
+
+  // 站内搜索结果不参与收录，避免低质量页面被索引
+  if (keyword.value) {
+    applySeo({
+      title: `“${keyword.value}”的搜索结果 - ${site.siteName}`,
+      description: `在 ${site.siteName} 中搜索“${keyword.value}”的相关文章。`,
+      canonical: absoluteUrl(router.currentRoute.value.fullPath),
+      robots: "noindex, follow",
+      siteName: site.siteName,
+      type: "website",
+    });
+    return;
+  }
+
+  if (fid.value) {
+    await siteStore.loadCategories();
+    const category = siteStore.categoryName(fid.value);
+    const title = `${category || "文章"} 分类 - ${site.siteName}`;
+    applySeo({
+      title,
+      description: `${site.siteName} 中「${category || "该"}」分类下的全部文章列表。`,
+      keywords: [category, site.siteName, site.keywords].filter(Boolean).join(","),
+      canonical: absoluteUrl(`/category/${fid.value}`),
+      siteName: site.siteName,
+      type: "website",
+      section: category || undefined,
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: title,
+          url: absoluteUrl(`/category/${fid.value}`),
+        },
+      ],
+    });
+    return;
+  }
+
+  applySeo({
+    title: `${site.siteName} - ${site.siteSlogan}`,
+    description: site.description,
+    keywords: site.keywords,
+    canonical: absoluteUrl("/"),
+    siteName: site.siteName,
+    type: "website",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: site.siteName,
+        url: absoluteUrl("/"),
+        description: site.description,
+      },
+    ],
+  });
 };
 
 const getArticleList = async () => {
@@ -85,7 +148,10 @@ const getArticleList = async () => {
     total.value = data?.total || 0;
     articleList.value = data?.list || [];
   } finally {
-    if (sequence === requestSequence) loading.value = false;
+    if (sequence === requestSequence) {
+      loading.value = false;
+      void updateSeo();
+    }
   }
 };
 

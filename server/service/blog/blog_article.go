@@ -178,7 +178,12 @@ func (s *ArticleService) CreateArticle(article model.Article) (err error) {
 	article.IsTop = 0
 	article.Status = 0
 	article.View = 0
-	return global.BLOG_DB.Create(&article).Error
+	err = global.BLOG_DB.Create(&article).Error
+	if err == nil {
+		// 新文章发布后刷新站点地图并通知搜索引擎
+		notifySearchEngines(seoService.ArticleURL(article.Fid, article.ID))
+	}
+	return err
 }
 
 // UpdateArticle 更新文章
@@ -188,18 +193,28 @@ func (s *ArticleService) UpdateArticle(article model.Article) (err error) {
 	}
 	article.EditTime = int(time.Now().Unix())
 	err = global.BLOG_DB.Save(&article).Error
+	if err == nil {
+		// 内容更新后刷新站点地图并通知搜索引擎
+		notifySearchEngines(seoService.ArticleURL(article.Fid, article.ID))
+	}
 	return err
 }
 
 // DeleteArticle 删除文章
 func (s *ArticleService) DeleteArticle(article model.Article) (err error) {
 	err = global.BLOG_DB.Delete(&article).Error
+	if err == nil {
+		seoService.ResetSitemap()
+	}
 	return err
 }
 
 // DeleteArticleByIds 批量删除文章
 func (s *ArticleService) DeleteArticleByIds(ids request.IdsReq) (err error) {
 	err = global.BLOG_DB.Delete(&[]model.Article{}, "id in ?", ids.Ids).Error
+	if err == nil {
+		seoService.ResetSitemap()
+	}
 	return err
 }
 

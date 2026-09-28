@@ -51,6 +51,12 @@ const MainMenuConfig: Array<MenuItem> = [
     svgIcon: getAssetPath("/media/icons/duotune/general/gen016.svg"),
     fontIcon: "bi-link-45deg",
   },
+  {
+    heading: "站点设置",
+    route: "/admin/setting/seo",
+    svgIcon: getAssetPath("/media/icons/duotune/general/gen021.svg"),
+    fontIcon: "bi-gear",
+  },
 ];
 
 export default MainMenuConfig;

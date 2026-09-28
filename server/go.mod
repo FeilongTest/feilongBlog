@@ -24,6 +24,7 @@ require (
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/testify v1.8.0 // indirect
+	github.com/yuin/goldmark v1.7.4 // indirect
 	golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e // indirect
 )
 

@@ -9,6 +9,7 @@ import { useRouter } from "vue-router";
 import { useConfigStore } from "@/stores/config";
 import { useThemeStore } from "@/stores/theme";
 import { useBodyStore } from "@/stores/body";
+import { useSiteStore } from "@/stores/site";
 import { themeMode } from "@/core/helpers/config";
 import { initializeComponents } from "@/core/plugins/keenthemes";
 import { getVisitorId } from "@/utils/visitor";
@@ -22,6 +23,7 @@ export default defineComponent({
     const configStore = useConfigStore();
     const themeStore = useThemeStore();
     const bodyStore = useBodyStore();
+    const siteStore = useSiteStore();
     const router = useRouter();
     let lastRecordedPath = "";
     const recordVisit = (path: string) => {
@@ -43,6 +45,9 @@ export default defineComponent({
        * remove this to use static config (@/core/config/DefaultLayoutConfig.ts)
        */
       configStore.overrideLayoutConfig();
+
+      // 站点信息用于页面标题与 SEO 元信息
+      siteStore.loadSiteSetting();
 
       /**
        *  Sets a mode from configuration

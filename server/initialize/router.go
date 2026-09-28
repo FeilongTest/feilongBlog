@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	v1 "feilongBlog/api/v1"
 	"feilongBlog/global"
 	"feilongBlog/middleware"
 	"feilongBlog/router"
@@ -33,6 +34,7 @@ func Routers() *gin.Engine {
 	{
 		blogRouter.InitBaseRouter(PublicGroup)    //注册公用路由
 		blogRouter.InitArticleRouter(PublicGroup) //注册文章路由
+		blogRouter.InitSeoRouter(PublicGroup)     //注册站点地图、爬虫规则与站点信息
 	}
 
 	PrivateGroup := Router.Group("/admin")
@@ -45,7 +47,11 @@ func Routers() *gin.Engine {
 		blogRouter.InitCommentRouter(PrivateGroup)
 		blogRouter.InitFriendlinkRouter(PrivateGroup)
 		blogRouter.InitStatisticRouter(PrivateGroup)
+		blogRouter.InitSettingRouter(PrivateGroup)
 	}
+
+	// 未命中接口的请求交由服务端渲染，为前端路由注入 SEO 信息
+	Router.NoRoute(v1.ApiGroupApp.SeoApiGroup.RenderPage)
 	global.BLOG_LOG.Info("router register success")
 	return Router
 }

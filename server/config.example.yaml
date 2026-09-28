@@ -23,6 +23,14 @@ system:
   oss-type: local
   use-multipoint: false
 
+seo:
+  site-url: https://blog.example.com
+  web-root: ../web/dist
+  sitemap-ttl: 600
+  baidu-token: ""
+  indexnow-key: ""
+  auto-push: false
+
 zap:
   level: info
   prefix: "[blog]"

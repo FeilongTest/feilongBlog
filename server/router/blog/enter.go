@@ -103,3 +103,24 @@ func (s *ApiRouter) InitStatisticRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.GET("dashboard", statisticApi.GetDashboard)
 	}
 }
+
+func (s *ApiRouter) InitSeoRouter(Router *gin.RouterGroup) {
+	seoApi := v1.ApiGroupApp.SeoApiGroup
+	settingApi := v1.ApiGroupApp.SettingApiGroup
+	{
+		Router.GET("/sitemap.xml", seoApi.Sitemap)                      // 站点地图
+		Router.HEAD("/sitemap.xml", seoApi.Sitemap)                     // 站点地图
+		Router.GET("/robots.txt", seoApi.Robots)                        // 爬虫抓取规则
+		Router.HEAD("/robots.txt", seoApi.Robots)                       // 爬虫抓取规则
+		Router.GET("/base/getSiteSetting", settingApi.GetPublicSetting) // 获取站点公开信息
+	}
+}
+
+func (s *ApiRouter) InitSettingRouter(Router *gin.RouterGroup) {
+	settingRouter := Router.Group("setting")
+	settingApi := v1.ApiGroupApp.SettingApiGroup
+	{
+		settingRouter.GET("getSetting", settingApi.GetSetting)       // 获取站点设置
+		settingRouter.PUT("updateSetting", settingApi.UpdateSetting) // 更新站点设置
+	}
+}

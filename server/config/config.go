@@ -9,6 +9,7 @@ type Server struct {
 	Mysql  Mysql  `mapstructure:"mysql" json:"mysql" yaml:"mysql"`
 	Local  Local  `mapstructure:"local" json:"local" yaml:"local"`
 	R2     R2     `mapstructure:"r2" json:"r2" yaml:"r2"`
+	Seo    Seo    `mapstructure:"seo" json:"seo" yaml:"seo"`
 	// 跨域配置
 	Cors CORS `mapstructure:"cors" json:"cors" yaml:"cors"`
 }

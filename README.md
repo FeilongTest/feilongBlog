@@ -345,6 +345,16 @@ sudo systemctl status feilong-blog
 
 ### 3. 配置 Nginx
 
+前端使用 history 路由，页面标题、描述与结构化数据由后端注入，因此除静态资源外的 HTML 请求都需要转发给 Go 服务。完整配置见 `web/nginx.conf.example`，其中包含首页、前台路由、`sitemap.xml`、`robots.txt` 的转发规则，并带有后端异常时回退静态首页的兜底配置：
+
+```bash
+sudo cp web/nginx.conf.example /etc/nginx/sites-available/feilong-blog
+sudo ln -sf /etc/nginx/sites-available/feilong-blog /etc/nginx/sites-enabled/feilong-blog
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+如果沿用下面的精简配置，至少需要保证首页与前台路由转发到后端，否则页面标题和正文不会被搜索引擎抓取：
+
 ```nginx
 server {
     listen 80;
@@ -422,6 +432,37 @@ cd ../web
 npm run type-check
 npm run build
 ```
+
+## 搜索引擎优化
+
+站点自带服务端 SEO 能力，不需要额外部署预渲染服务：
+
+- **HTML5 history 路由**：文章地址形如 `/content/1/2`，旧的 `/#/xxx` 链接会自动跳转到新地址。
+- **服务端渲染页面信息**：后端读取前端构建产物注入 `title`、`description`、`canonical`、Open Graph、Twitter 卡片与 JSON-LD（`WebSite`、`BlogPosting`、`BreadcrumbList`、`CollectionPage`），并把文章正文或列表内容直接写入 HTML，不执行 JavaScript 的爬虫同样能读到完整内容。
+- **动态站点地图**：`/sitemap.xml` 按数据库内容生成，文章或分类变化后自动刷新缓存。
+- **爬虫规则**：`/robots.txt` 屏蔽后台与接口前缀，并声明站点地图地址。
+- **主动推送**：发布或更新文章后自动推送到 IndexNow（Bing、Yandex 等）与百度普通收录。
+
+### 配置
+
+在 `config.yaml` 中配置 `seo` 节点：
+
+| 配置项 | 说明 |
+| --- | --- |
+| `site-url` | 站点主域名，用于生成绝对地址，例如 `https://blog.example.com` |
+| `web-root` | 前端构建产物目录，配置后开启服务端渲染 |
+| `sitemap-ttl` | 站点地图缓存时间（秒），默认 600 |
+| `indexnow-key` | IndexNow 密钥，同时用作密钥文件名 |
+| `baidu-token` | 百度搜索资源平台的普通收录推送 token |
+| `auto-push` | 发布或更新文章后是否自动推送 |
+
+站点名称、副标题、描述、关键词与站长验证码可以在后台「站点设置」中维护。
+
+### 上线后建议完成
+
+1. 把 `https://你的域名/sitemap.xml` 提交到 Google Search Console、Bing 网站管理员工具和百度搜索资源平台。
+2. 复制各站长平台提供的验证码，填入后台「站点设置」，完成站点归属验证。
+3. 百度需要在搜索资源平台申请普通收录 token 后填入 `baidu-token`，之后发布文章会自动推送。
 
 ## 安全建议
 

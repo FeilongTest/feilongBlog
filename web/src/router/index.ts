@@ -1,10 +1,11 @@
 import {
   createRouter,
-  createWebHashHistory,
+  createWebHistory,
   type RouteRecordRaw,
 } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useConfigStore } from "@/stores/config";
+import { useSiteStore } from "@/stores/site";
 import JwtService from "@/core/services/JwtService";
 
 const routes: Array<RouteRecordRaw> = [
@@ -85,6 +86,16 @@ const routes: Array<RouteRecordRaw> = [
           breadcrumbs: ["account", "settings"],
         },
       },
+      {
+        path: "/admin/setting/seo",
+        name: "admin-setting-seo",
+        component: () => import("@/views/admin/setting/SeoSetting.vue"),
+        meta: {
+          pageTitle: "站点设置",
+          breadcrumbs: ["setting", "seo"],
+        },
+      },
+
     ],
   },
   {
@@ -166,8 +177,14 @@ const routes: Array<RouteRecordRaw> = [
   },
 ];
 
+// 兼容旧版 hash 路由的分享地址，例如 /#/content/1/2 会跳转到 /content/1/2
+// 使用 history 模式后地址对搜索引擎才是有意义的独立页面
+if (window.location.hash.startsWith("#/")) {
+  window.history.replaceState(null, "", window.location.hash.slice(1) || "/");
+}
+
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes,
 });
 
@@ -192,7 +209,8 @@ router.beforeEach((to) => {
   }
 
   // current page view title
-  const appName = import.meta.env.VITE_APP_NAME || "Feilong'S Blog";
+  const siteStore = useSiteStore();
+  const appName = siteStore.setting.siteName || import.meta.env.VITE_APP_NAME || "飞龙博客";
 	document.title = to.meta.pageTitle ? `${to.meta.pageTitle} - ${appName}` : appName;
 
   // reset config to initial state

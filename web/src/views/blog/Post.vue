@@ -149,11 +149,14 @@ import Prism from "prismjs";
 import CommentSection from "@/components/blog/CommentSection.vue";
 import PostSkeleton from "@/components/blog/PostSkeleton.vue";
 import type { ArticleList, ArticelSummary } from "@/core/blog/ArticleTypes";
+import { absoluteUrl, applySeo, stripHtml } from "@/core/seo";
 import { getAssetPath } from "@/core/helpers/assets";
+import { useSiteStore } from "@/stores/site";
 import service from "@/utils/request";
 
 const route = useRoute();
 const router = useRouter();
+const siteStore = useSiteStore();
 const articleInfo = ref<ArticleList>({} as ArticleList);
 const articleSummary = ref<ArticelSummary[]>([]);
 const articleList = ref<ArticleList[]>([]);
@@ -221,6 +224,42 @@ const getArticleList = async () => {
   }
 };
 
+// 站点信息与文章内容共同决定详情页的 SEO 元信息
+const applyArticleSeo = async (article: ArticleList) => {
+  const site = await siteStore.loadSiteSetting();
+  const canonical = absoluteUrl(`/content/${article.fid}/${article.ID}`);
+  const publishedTime = article.ctime ? dayjs.unix(article.ctime).toISOString() : undefined;
+  const modifiedTime = article.editTime ? dayjs.unix(article.editTime).toISOString() : undefined;
+  const description = stripHtml(sanitizedContent.value) || `${site.siteName} 的文章：${article.title}`;
+
+  applySeo({
+    title: `${article.title} - ${site.siteName}`,
+    description,
+    keywords: [article.title, site.siteName].filter(Boolean).join(","),
+    canonical,
+    type: "article",
+    image: article.pic || undefined,
+    siteName: site.siteName,
+    publishedTime,
+    modifiedTime,
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: article.title,
+        description,
+        url: canonical,
+        mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+        author: { "@type": "Person", name: site.author || site.siteName },
+        publisher: { "@type": "Organization", name: site.siteName },
+        datePublished: publishedTime,
+        dateModified: modifiedTime,
+        image: article.pic ? [article.pic] : undefined,
+      },
+    ],
+  });
+};
+
 const getArticle = async (id: number) => {
   const sequence = ++requestSequence;
   loading.value = true;
@@ -229,8 +268,7 @@ const getArticle = async (id: number) => {
     const res: any = await service.post("/base/getArticle", { id });
     if (sequence !== requestSequence) return;
     articleInfo.value = res.data;
-    const appName = import.meta.env.VITE_APP_NAME || "Feilong'S Blog";
-    document.title = `${articleInfo.value.title} - ${appName}`;
+    await applyArticleSeo(articleInfo.value);
     loading.value = false;
     await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks()]);
   } catch {
