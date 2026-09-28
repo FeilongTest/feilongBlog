@@ -37,10 +37,11 @@ func (s *SeoService) ArticleURL(fid int, id uint) string {
 	return s.absoluteURL(fmt.Sprintf("/content/%d/%d", fid, id))
 }
 
-// notifySearchEngines 内容变化后清理站点地图缓存并推送地址给搜索引擎
+// notifySearchEngines 内容变化后清理站点地图与订阅缓存，并推送地址给搜索引擎
 func notifySearchEngines(urls ...string) {
 	service := SeoService{}
 	service.ResetSitemap()
+	service.ResetFeed()
 	service.PushArticles(urls)
 }
 

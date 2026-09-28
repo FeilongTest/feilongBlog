@@ -44,6 +44,29 @@ type ArticleSearch struct {
 	request.PageInfo
 }
 
+// ArticleBrief 文章简要信息，用于详情页侧栏展示
+type ArticleBrief struct {
+	ID    uint   `json:"ID"`
+	Fid   int    `json:"fid"`
+	Title string `json:"title"`
+	Pic   string `json:"pic"`
+	View  int    `json:"view"`
+	Ctime int    `json:"ctime"`
+}
+
+// PostAside 文章详情页侧栏数据
+type PostAside struct {
+	Related []ArticleBrief `json:"related"`
+	Hot     []ArticleBrief `json:"hot"`
+}
+
+// PostAsideRequest 侧栏数据查询参数
+type PostAsideRequest struct {
+	Fid     int  `json:"fid" form:"fid"`
+	Exclude uint `json:"exclude" form:"exclude"`
+	Limit   int  `json:"limit" form:"limit"`
+}
+
 func (Article) TableName() string {
 	return "blog_article"
 }

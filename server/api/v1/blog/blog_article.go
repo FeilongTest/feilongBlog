@@ -202,6 +202,20 @@ func (a *ArticleApi) DelArticleByIds(c *gin.Context) {
 	response.OkWithMessage("删除成功", c)
 }
 
+// GetPostAside 获取文章详情页的相关文章与热门文章
+func (a *ArticleApi) GetPostAside(c *gin.Context) {
+	var req model.PostAsideRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if aside, err := articleApi.GetPostAside(req); err != nil {
+		response.FailWithMessage("获取推荐内容失败", c)
+	} else {
+		response.OkWithData(aside, c)
+	}
+}
+
 // GetArticleSummary 获取文章分类概况
 func (a *ArticleApi) GetArticleSummary(c *gin.Context) {
 	var req request.GetById

@@ -63,6 +63,17 @@ func (a *SeoApi) Robots(c *gin.Context) {
 	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte(seoService.Robots()))
 }
 
+// Feed 输出 RSS 订阅内容
+func (a *SeoApi) Feed(c *gin.Context) {
+	content := seoService.Feed()
+	if content == "" {
+		c.Data(http.StatusNotFound, "text/plain; charset=utf-8", []byte("未配置 seo.site-url，订阅源不可用"))
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=600")
+	c.Data(http.StatusOK, "application/rss+xml; charset=utf-8", []byte(content))
+}
+
 // isAPIPath 判断请求是否属于后端接口
 func isAPIPath(path string) bool {
 	for _, prefix := range apiPathPrefixes {

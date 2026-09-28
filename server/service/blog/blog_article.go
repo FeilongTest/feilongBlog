@@ -152,6 +152,51 @@ func (s *ArticleService) GetArticleSummary(id int) (result any, err error) {
 	return categoryGroup, err
 }
 
+// briefArticles 查询文章简要信息，orderBy 决定排序方式
+func (s *ArticleService) briefArticles(limit int, excludeID uint, fid int, orderBy string) []model.ArticleBrief {
+	db := global.BLOG_DB.Model(&model.Article{}).Where("status = ? AND id <> ?", 0, excludeID)
+	if fid > 0 {
+		db = db.Where("fid = ?", fid)
+	}
+	var list []model.ArticleBrief
+	if err := db.Order(orderBy).Limit(limit).Find(&list).Error; err != nil {
+		return []model.ArticleBrief{}
+	}
+	return list
+}
+
+// GetPostAside 获取文章详情页的相关文章与热门文章
+func (s *ArticleService) GetPostAside(req model.PostAsideRequest) (aside model.PostAside, err error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 10 {
+		limit = 5
+	}
+
+	// 优先推荐同分类下的其他文章
+	related := s.briefArticles(limit, req.Exclude, req.Fid, "view desc, ctime desc")
+	// 分类内文章不足时用最新文章补齐
+	if len(related) < limit {
+		seen := make(map[uint]bool, len(related))
+		for _, item := range related {
+			seen[item.ID] = true
+		}
+		for _, item := range s.briefArticles(limit, req.Exclude, 0, "ctime desc") {
+			if len(related) >= limit {
+				break
+			}
+			if seen[item.ID] {
+				continue
+			}
+			seen[item.ID] = true
+			related = append(related, item)
+		}
+	}
+
+	aside.Related = related
+	aside.Hot = s.briefArticles(limit, req.Exclude, 0, "view desc, ctime desc")
+	return aside, nil
+}
+
 // GetArticle 查看文章
 func (s *ArticleService) GetArticle(id int) (article model.Article, err error) {
 	db := global.BLOG_DB.Where("id = ?", id).First(&article)

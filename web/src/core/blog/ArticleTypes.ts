@@ -21,7 +21,24 @@ interface ArticelSummary {
     total:number;
     name:string;
 }
+
+interface ArticleBrief {
+    ID:number;
+    fid:number;
+    title:string;
+    pic:string;
+    view:number;
+    ctime:number;
+}
+
+interface PostAside {
+    related:ArticleBrief[];
+    hot:ArticleBrief[];
+}
+
 export type {
     ArticleList,
     ArticelSummary,
+    ArticleBrief,
+    PostAside,
 }

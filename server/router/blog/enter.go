@@ -23,6 +23,7 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)          //获取文章列表
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)                 //获取文章信息
 		apiRouterWithoutRecord.POST("getSummary", articleApi.GetArticleSummary)          //获取分类概述
+		apiRouterWithoutRecord.GET("getPostAside", articleApi.GetPostAside)              //获取文章推荐内容
 		apiRouterWithoutRecord.POST("likeArticle", articleApi.LikeArticle)               //点赞或取消点赞
 		apiRouterWithoutRecord.GET("getArticleLike", articleApi.GetArticleLike)          //获取点赞状态
 		apiRouterWithoutRecord.GET("getCommentList", commentApi.GetCommentList)          //获取评论列表
@@ -112,6 +113,8 @@ func (s *ApiRouter) InitSeoRouter(Router *gin.RouterGroup) {
 		Router.HEAD("/sitemap.xml", seoApi.Sitemap)                     // 站点地图
 		Router.GET("/robots.txt", seoApi.Robots)                        // 爬虫抓取规则
 		Router.HEAD("/robots.txt", seoApi.Robots)                       // 爬虫抓取规则
+		Router.GET("/rss.xml", seoApi.Feed)                             // RSS 订阅
+		Router.HEAD("/rss.xml", seoApi.Feed)                            // RSS 订阅
 		Router.GET("/base/getSiteSetting", settingApi.GetPublicSetting) // 获取站点公开信息
 	}
 }

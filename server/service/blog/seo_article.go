@@ -56,14 +56,20 @@ func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, bool) 
 	return seo, true
 }
 
-// renderArticleBody 生成文章正文的首屏直出内容，供不执行 JS 的爬虫读取
-func (s *SeoService) renderArticleBody(article model.Article, categoryName, author string) string {
+// articleContentHTML 返回清洗后的正文 HTML，供文章详情页与订阅源共用
+func articleContentHTML(article model.Article) string {
 	content := article.Content
 	if strings.EqualFold(strings.TrimSpace(article.ContentFormat), "markdown") {
 		content = markdownToHTML(content)
 	} else {
 		content = sanitizeArticleHTML(content)
 	}
+	return truncateRunes(content, seoBodyLimit)
+}
+
+// renderArticleBody 生成文章正文的首屏直出内容，供不执行 JS 的爬虫读取
+func (s *SeoService) renderArticleBody(article model.Article, categoryName, author string) string {
+	content := articleContentHTML(article)
 	if content == "" {
 		content = fmt.Sprintf("<p>%s</p>", escapeHTML(plainText(article.Content, article.ContentFormat, 150)))
 	}
@@ -84,7 +90,7 @@ func (s *SeoService) renderArticleBody(article model.Article, categoryName, auth
 		b.WriteString(escapeHTML(author))
 	}
 	b.WriteString("</p><div class=\"seo-prerender-content\">")
-	b.WriteString(truncateRunes(content, seoBodyLimit))
+	b.WriteString(content)
 	b.WriteString("</div></article></div>")
 	return b.String()
 }

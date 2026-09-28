@@ -100,6 +100,7 @@
         <div class="d-flex flex-wrap gap-4">
           <a class="btn btn-sm btn-light-primary" :href="sitemapUrl" target="_blank" rel="noopener">{{ sitemapUrl }}</a>
           <a class="btn btn-sm btn-light" :href="robotsUrl" target="_blank" rel="noopener">{{ robotsUrl }}</a>
+          <a class="btn btn-sm btn-light" :href="rssUrl" target="_blank" rel="noopener">{{ rssUrl }}</a>
         </div>
         <div class="notice d-flex bg-light-info rounded border-info border border-dashed p-6 mt-8">
           <i class="bi bi-info-circle-fill text-info fs-2x me-5"></i>
@@ -134,6 +135,7 @@ const form = reactive({
 const origin = window.location.origin;
 const sitemapUrl = `${origin}/sitemap.xml`;
 const robotsUrl = `${origin}/robots.txt`;
+const rssUrl = `${origin}/rss.xml`;
 
 const loadSetting = async () => {
   loading.value = true;
