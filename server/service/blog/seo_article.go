@@ -86,8 +86,9 @@ func (s *SeoService) renderArticleBody(article model.Article, categoryName, auth
 		b.WriteString(fmt.Sprintf(" · <a href=\"%s\">%s</a>", escapeHTML(fmt.Sprintf("/category/%d", article.Fid)), escapeHTML(categoryName)))
 	}
 	if author != "" {
-		b.WriteString(" · ")
+		b.WriteString(` · <a href="/about">`)
 		b.WriteString(escapeHTML(author))
+		b.WriteString("</a>")
 	}
 	b.WriteString("</p><div class=\"seo-prerender-content\">")
 	b.WriteString(content)
@@ -104,7 +105,7 @@ func (s *SeoService) articleJsonLd(article model.Article, setting model.Setting,
 		"description":      description,
 		"mainEntityOfPage": map[string]any{"@type": "WebPage", "@id": canonical},
 		"url":              canonical,
-		"author":           map[string]any{"@type": "Person", "name": author},
+		"author":           s.personJsonLd(author),
 		"publisher": map[string]any{
 			"@type": "Organization",
 			"name":  setting.SiteName,
@@ -123,6 +124,15 @@ func (s *SeoService) articleJsonLd(article model.Article, setting model.Setting,
 		data["image"] = []string{article.Pic}
 	}
 	return data
+}
+
+// personJsonLd 作者实体，统一指向关于页
+func (s *SeoService) personJsonLd(name string) map[string]any {
+	person := map[string]any{"@type": "Person", "name": name}
+	if url := s.absoluteURL("/about"); url != "" {
+		person["url"] = url
+	}
+	return person
 }
 
 // breadcrumbJsonLd 面包屑结构化数据

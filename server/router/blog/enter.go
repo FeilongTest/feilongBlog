@@ -21,6 +21,7 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.GET("getContact", userRouterApi.GetPublicContact)         // 获取公开联系信息
 		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList)       // 获取分类
 		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)          //获取文章列表
+		apiRouterWithoutRecord.GET("getArchive", articleApi.GetArchive)                  //获取文章归档
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)                 //获取文章信息
 		apiRouterWithoutRecord.POST("getSummary", articleApi.GetArticleSummary)          //获取分类概述
 		apiRouterWithoutRecord.GET("getPostAside", articleApi.GetPostAside)              //获取文章推荐内容

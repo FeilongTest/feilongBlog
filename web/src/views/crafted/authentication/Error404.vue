@@ -6,11 +6,11 @@
       <div class="card card-flush w-lg-650px py-5">
         <div class="card-body py-15 py-lg-20">
           <!--begin::Title-->
-          <h1 class="fw-bolder fs-2hx text-gray-900 mb-4">Oops!</h1>
+          <h1 class="fw-bolder fs-2hx text-gray-900 mb-4">页面不存在</h1>
           <!--end::Title-->
           <!--begin::Text-->
           <div class="fw-semibold fs-6 text-gray-500 mb-7">
-            We can't find that page.
+            这个地址没有对应的内容，可能已经被移动或删除。
           </div>
           <!--end::Text-->
           <!--begin::Illustration-->
@@ -29,9 +29,7 @@
           <!--end::Illustration-->
           <!--begin::Link-->
           <div class="mb-0">
-            <router-link to="/" class="btn btn-sm btn-primary"
-              >Return Home</router-link
-            >
+            <router-link to="/" class="btn btn-sm btn-primary">返回首页</router-link>
           </div>
           <!--end::Link-->
         </div>
@@ -46,8 +44,10 @@
 import { getAssetPath } from "@/core/helpers/assets";
 import { computed, defineComponent, onMounted } from "vue";
 import LayoutService from "@/core/services/LayoutService";
+import { applySeo } from "@/core/seo";
 import { useBodyStore } from "@/stores/body";
 import { getIllustrationsPath } from "@/core/helpers/assets";
+import { useSiteStore } from "@/stores/site";
 import { useThemeStore } from "@/stores/theme";
 
 export default defineComponent({
@@ -71,6 +71,16 @@ export default defineComponent({
       storeBody.addBodyAttribute({
         qualifiedName: "style",
         value: `background-image: url("${bgImage}")`,
+      });
+
+      const siteStore = useSiteStore();
+      siteStore.loadSiteSetting().finally(() => {
+        applySeo({
+          title: `页面不存在 - ${siteStore.setting.siteName}`,
+          description: "你访问的页面不存在或已删除。",
+          robots: "noindex, nofollow",
+          siteName: siteStore.setting.siteName,
+        });
       });
     });
 

@@ -89,6 +89,20 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 	return article, total, err
 }
 
+// ListArchive 返回已发布文章的标题列表，供归档页和搜索引擎抓取
+func (s *ArticleService) ListArchive(limit int) (list []model.ArchiveEntry, err error) {
+	if limit <= 0 || limit > 2000 {
+		limit = 2000
+	}
+	err = global.BLOG_DB.Model(&model.Article{}).
+		Select("id", "fid", "title", "ctime").
+		Where("status = ?", 0).
+		Order("ctime desc, id desc").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
 // GetArticleListAdmin 管理员获取文章分类
 func (s *ArticleService) GetArticleListAdmin(info model.ArticleSearch) (article []model.Article, total int64, err error) {
 	limit := info.PageSize

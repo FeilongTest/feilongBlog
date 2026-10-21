@@ -132,6 +132,24 @@ const routes: Array<RouteRecordRaw> = [
           breadcrumbs: ["Pages", "Article"],
         },
       },
+      {
+        path: "about",
+        name: "blog-about",
+        component: () => import("@/views/blog/About.vue"),
+        meta: {
+          pageTitle: "关于",
+          breadcrumbs: ["Pages", "About"],
+        },
+      },
+      {
+        path: "archive",
+        name: "blog-archive",
+        component: () => import("@/views/blog/Archive.vue"),
+        meta: {
+          pageTitle: "归档",
+          breadcrumbs: ["Pages", "Archive"],
+        },
+      },
     ],
   },
   {

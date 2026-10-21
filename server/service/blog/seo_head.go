@@ -20,7 +20,9 @@ func (s *SeoService) renderHead(seo *PageSeo) string {
 		b.WriteString("\n")
 	}
 
-	line(`<meta name="description" content="%s">`, html.EscapeString(seo.Description))
+	if seo.Description != "" {
+		line(`<meta name="description" content="%s">`, html.EscapeString(seo.Description))
+	}
 	if seo.Keywords != "" {
 		line(`<meta name="keywords" content="%s">`, html.EscapeString(seo.Keywords))
 	}
@@ -41,7 +43,9 @@ func (s *SeoService) renderHead(seo *PageSeo) string {
 	line(`<meta property="og:locale" content="zh_CN">`)
 	line(`<meta property="og:type" content="%s">`, html.EscapeString(seo.OgType))
 	line(`<meta property="og:title" content="%s">`, html.EscapeString(seo.Title))
-	line(`<meta property="og:description" content="%s">`, html.EscapeString(seo.Description))
+	if seo.Description != "" {
+		line(`<meta property="og:description" content="%s">`, html.EscapeString(seo.Description))
+	}
 	if seo.Canonical != "" {
 		line(`<meta property="og:url" content="%s">`, html.EscapeString(seo.Canonical))
 	}
@@ -53,7 +57,9 @@ func (s *SeoService) renderHead(seo *PageSeo) string {
 		line(`<meta name="twitter:card" content="summary">`)
 	}
 	line(`<meta name="twitter:title" content="%s">`, html.EscapeString(seo.Title))
-	line(`<meta name="twitter:description" content="%s">`, html.EscapeString(seo.Description))
+	if seo.Description != "" {
+		line(`<meta name="twitter:description" content="%s">`, html.EscapeString(seo.Description))
+	}
 	if seo.Published > 0 {
 		line(`<meta property="article:published_time" content="%s">`, isoTime(seo.Published))
 	}

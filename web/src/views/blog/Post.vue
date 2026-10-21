@@ -1,10 +1,7 @@
 <template>
-  <div
-    v-if="readingProgress > 0"
-    class="reading-progress"
-    :style="{ width: `${readingProgress}%` }"
-    aria-hidden="true"
-  ></div>
+  <div class="reading-progress" aria-hidden="true">
+    <span class="reading-progress-bar" :style="{ transform: `scaleX(${readingProgress})` }"></span>
+  </div>
 
   <PostSkeleton v-if="loading" />
   <div v-else-if="loadError" class="card py-15 text-center post-loaded">
@@ -20,7 +17,7 @@
     <div class="card-body p-lg-20 pb-lg-0">
       <div class="d-flex flex-column flex-xl-row">
         <div class="flex-lg-row-fluid me-xl-15">
-          <div class="mb-17">
+          <div ref="articleRef" class="mb-17">
             <div class="mb-8">
               <div class="d-flex flex-wrap mb-6">
                 <div class="me-9 my-1">
@@ -45,15 +42,18 @@
 
               <span class="text-dark text-hover-primary fs-2 fw-bold">{{ articleInfo.title }}</span>
 
-              <div v-if="articleInfo.type !== 0 && articleInfo.pic" class="overlay mt-8">
-                <div
-                  class="bgi-no-repeat bgi-position-center bgi-size-cover card-rounded min-h-350px"
-                  :style="{ backgroundImage: `url(${articleInfo.pic})` }"
-                ></div>
-              </div>
+              <button
+                v-if="articleInfo.type !== 0 && articleInfo.pic"
+                type="button"
+                class="article-cover"
+                aria-label="查看缩略图大图"
+                @click="openLightbox(articleInfo.pic, articleInfo.title)"
+              >
+                <img :src="articleInfo.pic" :alt="articleInfo.title" />
+              </button>
             </div>
 
-            <div ref="contentRef" class="article-content mb-8" v-html="sanitizedContent"></div>
+            <div ref="contentRef" class="article-content mb-8" @click="onContentClick" v-html="sanitizedContent"></div>
 
             <div class="d-flex align-items-center border border-dashed card-rounded p-5 p-lg-10 mb-14">
               <div class="text-center flex-shrink-0 me-7 me-lg-13">
@@ -61,7 +61,7 @@
                   <img :src="getAssetPath('/media/avatars/300-1.jpg')" alt="飞龙" />
                 </div>
                 <div>
-                  <span class="text-gray-700 fw-bold">飞龙</span>
+                  <router-link to="/about" class="text-gray-700 text-hover-primary fw-bold">飞龙</router-link>
                   <span class="text-gray-400 fs-7 fw-semibold d-block mt-1">feilong</span>
                 </div>
               </div>
@@ -209,7 +209,8 @@
   </div>
 
   <Teleport to="body">
-    <div v-if="lightboxSrc" class="image-lightbox" @click="closeLightbox">
+    <div v-if="lightboxSrc" class="image-lightbox" @click.self="closeLightbox">
+      <button type="button" class="image-lightbox-close" aria-label="关闭大图" @click="closeLightbox">×</button>
       <img :src="lightboxSrc" :alt="lightboxAlt" />
     </div>
   </Teleport>
@@ -238,6 +239,7 @@ const articleSummary = ref<ArticelSummary[]>([]);
 const articleList = ref<ArticleList[]>([]);
 const searchKeyword = ref("");
 const contentRef = ref<HTMLElement>();
+const articleRef = ref<HTMLElement>();
 const loading = ref(true);
 const loadError = ref(false);
 const summaryLoading = ref(true);
@@ -250,7 +252,6 @@ interface TocItem {
   text: string;
   level: number;
 }
-const toc = ref<TocItem[]>([]);
 const activeHeading = ref("");
 const readingProgress = ref(0);
 // 相关文章与热门文章
@@ -260,11 +261,47 @@ const asideLoading = ref(true);
 const lightboxSrc = ref("");
 const lightboxAlt = ref("");
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
-const sanitizedContent = computed(() => {
+
+const decodeHeadingText = (html: string) => html
+  .replace(/<[^>]+>/g, "")
+  .replace(/&nbsp;/g, " ")
+  .replace(/&amp;/g, "&")
+  .replace(/&lt;/g, "<")
+  .replace(/&gt;/g, ">")
+  .replace(/&quot;/g, "\"")
+  .replace(/&#39;/g, "'")
+  .replace(/\s+/g, " ")
+  .trim();
+
+// 把标题锚点写进 HTML。只改 DOM 的话，正文重新渲染后锚点会丢，目录就跳不到。
+const headingPattern = () => /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/gi;
+
+const injectHeadingIds = (html: string) => {
+  const matches = Array.from(html.matchAll(headingPattern()));
+  const hasSection = matches.some((match) => match[1] !== "1");
+  const items: TocItem[] = [];
+  let index = 0;
+  const output = html.replace(headingPattern(), (full, level: string, attrs: string, inner: string) => {
+    if (hasSection && level === "1") return full;
+    const text = decodeHeadingText(inner);
+    if (!text) return full;
+    index += 1;
+    const existing = attrs.match(/\sid=["']([^"']+)["']/i);
+    const id = existing?.[1] || `section-${index}`;
+    items.push({ id, text, level: Number(level) });
+    if (existing) return full;
+    return `<h${level}${attrs} id="${id}">${inner}</h${level}>`;
+  });
+  return { html: output, toc: items };
+};
+
+const renderedArticle = computed(() => {
   const source = articleInfo.value.content || "";
   const html = articleInfo.value.contentFormat === "markdown" ? markdown.render(source) : source;
-  return DOMPurify.sanitize(html);
+  return injectHeadingIds(DOMPurify.sanitize(html, { ADD_ATTR: ["id"] }));
 });
+const sanitizedContent = computed(() => renderedArticle.value.html);
+const toc = computed(() => renderedArticle.value.toc);
 
 const formatDateTime = (timestamp?: number) =>
   timestamp ? dayjs.unix(Number(timestamp)).format("YYYY年MM月DD日 HH时mm分") : "";
@@ -342,7 +379,7 @@ const applyArticleSeo = async (article: ArticleList) => {
         description,
         url: canonical,
         mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-        author: { "@type": "Person", name: site.author || site.siteName },
+        author: { "@type": "Person", name: site.author || site.siteName, url: absoluteUrl("/about") },
         publisher: { "@type": "Organization", name: site.siteName },
         datePublished: publishedTime,
         dateModified: modifiedTime,
@@ -356,7 +393,6 @@ const getArticle = async (id: number) => {
   const sequence = ++requestSequence;
   loading.value = true;
   loadError.value = false;
-  toc.value = [];
   activeHeading.value = "";
   readingProgress.value = 0;
   aside.value = { related: [], hot: [] };
@@ -366,9 +402,8 @@ const getArticle = async (id: number) => {
     articleInfo.value = res.data;
     await applyArticleSeo(articleInfo.value);
     loading.value = false;
-    await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks()]);
-    await Promise.all([buildToc(), enhanceImages(), getPostAside()]);
-    handleScroll();
+    await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks(), getPostAside()]);
+    updateReadingState();
   } catch {
     if (sequence === requestSequence) loadError.value = true;
   } finally {
@@ -385,48 +420,25 @@ const gotoContent = (article: ArticleList | ArticleBrief) => {
   router.replace({ name: "blog-content", params: { fid: article.fid, id: article.ID } });
 };
 
-// 为正文标题生成锚点并构建目录
-const buildToc = async () => {
-  await nextTick();
-  const container = contentRef.value;
-  if (!container) return;
-  const headings = Array.from(container.querySelectorAll<HTMLElement>("h2, h3"));
-  toc.value = headings.map((heading, index) => {
-    const id = heading.id || `heading-${index + 1}`;
-    heading.id = id;
-    return {
-      id,
-      text: heading.textContent?.trim() || "",
-      level: Number(heading.tagName.slice(1)),
-    };
-  });
+const readingOffset = () => {
+  const header = document.getElementById("kt_header");
+  return (header?.offsetHeight || 72) + 16;
 };
 
-// 点击目录跳转到对应标题
+// 点击目录跳转到对应标题。用 scrollIntoView，避免页面实际滚动容器不是 window 时跳不动。
 const scrollToHeading = (id: string) => {
   const target = document.getElementById(id);
   if (!target) return;
-  const top = target.getBoundingClientRect().top + window.scrollY - 96;
-  window.scrollTo({ top, behavior: "smooth" });
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   activeHeading.value = id;
 };
 
-// 正文图片懒加载，并支持点击放大
-const enhanceImages = async () => {
-  await nextTick();
-  const container = contentRef.value;
-  if (!container) return;
-  container.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
-    img.setAttribute("loading", "lazy");
-    img.setAttribute("decoding", "async");
-    img.classList.add("article-image-zoom");
-    if (img.dataset.zoomBound === "1") return;
-    img.dataset.zoomBound = "1";
-    img.addEventListener("click", () => {
-      lightboxSrc.value = img.currentSrc || img.src;
-      lightboxAlt.value = img.alt || "";
-    });
-  });
+const openLightbox = (src: string, alt = "") => {
+  const url = src.trim();
+  if (!url) return;
+  lightboxSrc.value = url;
+  lightboxAlt.value = alt;
 };
 
 const closeLightbox = () => {
@@ -434,29 +446,55 @@ const closeLightbox = () => {
   lightboxAlt.value = "";
 };
 
-// 阅读进度与当前章节高亮
-const handleScroll = () => {
-  const container = contentRef.value;
-  if (container) {
-    const rect = container.getBoundingClientRect();
-    const scrollable = rect.height - window.innerHeight;
-    if (scrollable > 0) {
-      const ratio = (-rect.top / scrollable) * 100;
-      readingProgress.value = Math.min(100, Math.max(0, ratio));
+// 正文图片和被链接包住的缩略图都打开大图，而不是跟着外链跳走
+const onContentClick = (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const image = target.closest("img");
+  if (!image || !contentRef.value?.contains(image)) return;
+  const link = image.closest("a");
+  if (link) {
+    const href = link.getAttribute("href") || "";
+    const sameImage = href === image.getAttribute("src") || href === image.currentSrc;
+    if (!sameImage && href && !href.startsWith("#")) return;
+    event.preventDefault();
+  }
+  openLightbox(image.currentSrc || image.src, image.alt || articleInfo.value.title || "");
+};
+
+// 阅读进度按正文区域计算，顶部细条用缩放绘制，避免宽度动画拖在滚动后面
+const updateReadingState = () => {
+  const article = articleRef.value;
+  const offset = readingOffset();
+  if (article) {
+    const rect = article.getBoundingClientRect();
+    const distance = rect.height - (window.innerHeight - offset);
+    if (distance <= 1) {
+      readingProgress.value = rect.top <= offset ? 1 : 0;
     } else {
-      readingProgress.value = 0;
+      const scrolled = offset - rect.top;
+      readingProgress.value = Math.min(1, Math.max(0, scrolled / distance));
     }
   }
 
   if (!toc.value.length) return;
-  let current = toc.value[0].id;
+  let current = "";
   for (const item of toc.value) {
     const element = document.getElementById(item.id);
     if (!element) continue;
-    if (element.getBoundingClientRect().top <= 120) current = item.id;
+    if (element.getBoundingClientRect().top <= offset + 4) current = item.id;
     else break;
   }
   activeHeading.value = current;
+};
+
+let scrollFrame = 0;
+const handleScroll = () => {
+  if (scrollFrame) return;
+  scrollFrame = window.requestAnimationFrame(() => {
+    scrollFrame = 0;
+    updateReadingState();
+  });
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
@@ -489,6 +527,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("scroll", handleScroll);
   window.removeEventListener("keydown", handleKeydown);
+  if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
 });
 
 const handleSearch = () => {
@@ -520,15 +559,45 @@ getArticleList();
 .latest-image-placeholder { width: 60px; height: 80px; flex: 0 0 60px; }
 .sidebar-results { animation: content-enter .24s ease-out; }
 
-/* 阅读进度条 */
+/* 顶部阅读进度。参考 PaperMod / NexT：固定在视口最上沿，用缩放而不是改宽度 */
 .reading-progress {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1100;
+  right: 0;
+  z-index: 1200;
   height: 3px;
-  background: linear-gradient(90deg, var(--kt-primary), #7239ea);
-  transition: width 0.12s linear;
+  pointer-events: none;
+}
+
+.reading-progress-bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: var(--kt-primary);
+}
+
+.article-cover {
+  display: block;
+  width: 100%;
+  margin: 2rem 0 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.article-cover img {
+  display: block;
+  width: 100%;
+  height: 350px;
+  object-fit: cover;
+  border-radius: 0.75rem;
 }
 
 /* 文章目录 */
@@ -555,8 +624,7 @@ getArticleList();
 .toc-level-3 { padding-left: 1.6rem; font-size: 0.82rem; }
 .toc-active { border-left-color: var(--kt-primary); color: var(--kt-primary); font-weight: 600; }
 
-/* 正文图片点击放大 */
-.article-content :deep(img.article-image-zoom) { cursor: zoom-in; }
+.article-content :deep(img) { cursor: pointer; }
 
 .image-lightbox {
   position: fixed;
@@ -567,15 +635,32 @@ getArticleList();
   justify-content: center;
   padding: 2rem;
   background: rgba(15, 23, 42, 0.88);
-  cursor: zoom-out;
+  cursor: default;
   animation: lightbox-enter 0.18s ease-out;
 }
 
 .image-lightbox img {
-  max-width: 100%;
+  max-width: min(1100px, 100%);
   max-height: 100%;
+  object-fit: contain;
   border-radius: 0.5rem;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.image-lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 @keyframes lightbox-enter {
@@ -603,6 +688,7 @@ getArticleList();
   color: var(--kt-text-gray-900);
   font-weight: 700;
   line-height: 1.4;
+  scroll-margin-top: 104px;
 }
 
 .article-content :deep(h1) { margin: 2.8rem 0 1.2rem; font-size: 2rem; }

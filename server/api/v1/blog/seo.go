@@ -36,6 +36,14 @@ func (a *SeoApi) RenderPage(c *gin.Context) {
 		return
 	}
 
+	if target := seoService.CanonicalRedirect(path); target != "" {
+		if rawQuery := c.Request.URL.RawQuery; rawQuery != "" {
+			target += "?" + rawQuery
+		}
+		c.Redirect(http.StatusMovedPermanently, target)
+		return
+	}
+
 	html, status, err := seoService.RenderPage(path, c.Request.URL.RawQuery)
 	if err != nil {
 		global.BLOG_LOG.Error("服务端渲染页面失败", zap.String("path", path), zap.Error(err))
@@ -43,6 +51,9 @@ func (a *SeoApi) RenderPage(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache")
+	if status == http.StatusNotFound {
+		c.Header("X-Robots-Tag", "noindex, nofollow")
+	}
 	c.Data(status, "text/html; charset=utf-8", []byte(html))
 }
 

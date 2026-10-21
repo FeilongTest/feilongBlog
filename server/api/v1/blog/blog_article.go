@@ -57,6 +57,17 @@ func (a *ArticleApi) GetArticleLike(c *gin.Context) {
 	response.OkWithDetailed(gin.H{"liked": liked, "count": count}, "获取成功", c)
 }
 
+// GetArchive 获取归档文章标题
+func (a *ArticleApi) GetArchive(c *gin.Context) {
+	list, err := articleApi.ListArchive(2000)
+	if err != nil {
+		global.BLOG_LOG.Error("获取归档失败", zap.Error(err))
+		response.FailWithMessage("获取归档失败", c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": list}, "获取成功", c)
+}
+
 // GetArticleList 获取文章列表
 func (a *ArticleApi) GetArticleList(c *gin.Context) {
 	var pageInfo model.ArticleSearch

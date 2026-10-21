@@ -72,7 +72,8 @@ html,
 body,
 #app {
   max-width: 100%;
-  overflow-x: hidden;
+  /* clip 只裁掉横向溢出，不会把纵向滚动从窗口挪到 body 上 */
+  overflow-x: clip;
 }
 
 @import "bootstrap-icons/font/bootstrap-icons.css";
@@ -85,6 +86,11 @@ body,
 @import "assets/sass/element-ui.dark";
 @import "assets/sass/plugins";
 @import "assets/sass/style";
+
+/* Bootstrap 骨架条默认 cursor: wait。加载时灰块铺满内容区，鼠标就会一直是忙碌转圈。 */
+.placeholder {
+  cursor: inherit;
+}
 
 #app {
   display: contents;

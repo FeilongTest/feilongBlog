@@ -44,6 +44,14 @@ type ArticleSearch struct {
 	request.PageInfo
 }
 
+// ArchiveEntry 归档页使用的文章条目，不包含正文
+type ArchiveEntry struct {
+	ID    uint   `json:"id"`
+	Fid   int    `json:"fid"`
+	Title string `json:"title"`
+	Ctime int    `json:"ctime"`
+}
+
 // ArticleBrief 文章简要信息，用于详情页侧栏展示
 type ArticleBrief struct {
 	ID    uint   `json:"ID"`

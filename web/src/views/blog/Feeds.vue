@@ -132,6 +132,9 @@ const updateSeo = async () => {
         name: site.siteName,
         url: absoluteUrl("/"),
         description: site.description,
+        publisher: site.author
+          ? { "@type": "Person", name: site.author, url: absoluteUrl("/about") }
+          : undefined,
       },
     ],
   });

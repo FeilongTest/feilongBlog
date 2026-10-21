@@ -60,7 +60,11 @@ func (s *SeoService) buildSitemap() string {
 		return ""
 	}
 
-	items := []sitemapItem{{Loc: siteURL + "/", ChangeFreq: "daily", Priority: "1.0"}}
+	items := []sitemapItem{
+		{Loc: siteURL + "/", ChangeFreq: "daily", Priority: "1.0"},
+		{Loc: siteURL + "/archive", ChangeFreq: "daily", Priority: "0.7"},
+		{Loc: siteURL + "/about", ChangeFreq: "monthly", Priority: "0.4"},
+	}
 
 	var categories []model.Category
 	if err := global.BLOG_DB.Order("sort desc").Find(&categories).Error; err == nil {
@@ -131,9 +135,15 @@ func escapeXML(text string) string {
 	return b.String()
 }
 
-// Robots 生成 robots.txt 内容
+// Robots 生成 robots.txt 内容。
+// 具体爬虫要写在通配规则前面。Cloudflare 如果在响应前插入同名 Disallow，需要在控制台关闭托管 robots.txt。
 func (s *SeoService) Robots() string {
 	var b strings.Builder
+	for _, agent := range []string{"Baiduspider", "Baiduspider-image", "Googlebot", "bingbot", "Sogou web spider", "360Spider", "YisouSpider"} {
+		b.WriteString("User-agent: ")
+		b.WriteString(agent)
+		b.WriteString("\nAllow: /\n\n")
+	}
 	b.WriteString("User-agent: *\n")
 	b.WriteString("Allow: /\n")
 	b.WriteString("Disallow: /admin/\n")
@@ -149,4 +159,23 @@ func (s *SeoService) Robots() string {
 		b.WriteString("/sitemap.xml\n")
 	}
 	return b.String()
+}
+
+// CanonicalRedirect 把关于页和归档页的大小写、尾部斜杠统一到规范地址
+func (s *SeoService) CanonicalRedirect(path string) string {
+	clean := strings.TrimRight(strings.TrimSpace(path), "/")
+	if clean == "" {
+		return ""
+	}
+	switch strings.ToLower(clean) {
+	case "/about":
+		if path != "/about" {
+			return "/about"
+		}
+	case "/archive":
+		if path != "/archive" {
+			return "/archive"
+		}
+	}
+	return ""
 }

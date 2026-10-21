@@ -104,7 +104,7 @@ func (s *UserService) GetPublicContact() (contact model.PublicContact, err error
 		contact = model.PublicContact{
 			TrueName: user.TrueName,
 			Email:    user.Email,
-			Pic:      user.Pic,
+			Pic:      publicMediaURL(user.Pic),
 			Bio:      user.Bio,
 		}
 	}

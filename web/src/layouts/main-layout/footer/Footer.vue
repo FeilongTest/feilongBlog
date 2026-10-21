@@ -24,13 +24,17 @@
       <!--begin::Menu-->
       <ul class="menu menu-gray-600 menu-hover-primary fw-semobold order-1">
         <li class="menu-item">
-          <a href="#" target="_blank" class="menu-link px-2">About</a>
+          <router-link to="/about" class="menu-link px-2">关于</router-link>
         </li>
-
         <li class="menu-item">
-          <a href="#" target="_blank" class="menu-link px-2">Support</a>
+          <router-link to="/archive" class="menu-link px-2">归档</router-link>
         </li>
-
+        <li class="menu-item">
+          <a href="/rss.xml" class="menu-link px-2">RSS</a>
+        </li>
+        <li v-if="icp" class="menu-item">
+          <span class="menu-link px-2 text-muted">{{ icp }}</span>
+        </li>
       </ul>
       <!--end::Menu-->
     </div>
@@ -40,14 +44,21 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { computed, defineComponent, onMounted } from "vue";
 import { footerWidthFluid } from "@/core/helpers/config";
+import { useSiteStore } from "@/stores/site";
 
 export default defineComponent({
   name: "KTFooter",
   setup() {
+    const siteStore = useSiteStore();
+    const icp = computed(() => siteStore.setting.icp);
+    onMounted(() => {
+      siteStore.loadSiteSetting().catch(() => undefined);
+    });
     return {
       footerWidthFluid,
+      icp,
     };
   },
 });
