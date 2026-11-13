@@ -2,28 +2,29 @@ package blog
 
 import (
 	"bytes"
+	htmlparser "golang.org/x/net/html"
 	"html"
+	"io"
 	"regexp"
 	"strings"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 )
 
 // 正文清洗与纯文本提取使用的正则
 // 注意：Go 的正则不支持反向引用，这里对标签名做宽松匹配
 var (
-	seoBlockTagPattern = regexp.MustCompile(`(?is)<(?:script|style|iframe|noscript|form)\b[^>]*>.*?</(?:script|style|iframe|noscript|form)>`)
-	seoTagPattern          = regexp.MustCompile(`(?s)<[^>]*>`)
-	seoEventAttrPattern    = regexp.MustCompile(`(?i)\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)`)
-	seoSchemeHrefPattern   = regexp.MustCompile(`(?i)(href|src)\s*=\s*("[^"]*(?:javascript|vbscript):[^"]*"|'[^']*(?:javascript|vbscript):[^']*')`)
-	seoSpacePattern        = regexp.MustCompile(`\s+`)
-	seoMarkdownCodeFence   = regexp.MustCompile("(?s)```.*?```")
-	seoMarkdownImage       = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
-	seoMarkdownLink        = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
-	seoMarkdownHeading     = regexp.MustCompile(`(?m)^\s{0,3}#{1,6}\s*`)
+	seoBlockTagPattern        = regexp.MustCompile(`(?is)<(?:script|style|iframe|noscript|form)\b[^>]*>.*?</(?:script|style|iframe|noscript|form)>`)
+	seoTagPattern             = regexp.MustCompile(`(?s)<[^>]*>`)
+	seoSpacePattern           = regexp.MustCompile(`\s+`)
+	seoMarkdownCodeFence      = regexp.MustCompile("(?s)```.*?```")
+	seoMarkdownImage          = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+	seoMarkdownLink           = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+	seoMarkdownHeading        = regexp.MustCompile(`(?m)^\s{0,3}#{1,6}\s*`)
 	seoMarkdownQuoteAndBullet = regexp.MustCompile(`(?m)^\s{0,3}(>|[-*+]\s+|\d+\.\s+)`)
-	seoMarkdownTable       = regexp.MustCompile(`(?m)^\s{0,3}\|`)
-	seoMarkdownEmphasis    = regexp.MustCompile("[*_`~]+")
+	seoMarkdownTable          = regexp.MustCompile(`(?m)^\s{0,3}\|`)
+	seoMarkdownEmphasis       = regexp.MustCompile("[*_`~]+")
 )
 
 // seoMarkdown 用于把 Markdown 正文渲染成 HTML，供爬虫直接读取
@@ -69,12 +70,16 @@ func plainText(content, format string, limit int) string {
 	return truncateRunes(text, limit)
 }
 
-// sanitizeArticleHTML 清理正文中的脚本与事件属性
+// articleHTMLPolicy 使用 HTML 解析器和允许列表，实体解码后的 URL 也必须是安全协议。
+var articleHTMLPolicy = func() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AllowAttrs("id").Matching(regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)).OnElements("h1", "h2", "h3", "h4", "h5", "h6")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[a-zA-Z0-9_-]+$`)).OnElements("code", "pre")
+	return p
+}()
+
 func sanitizeArticleHTML(raw string) string {
-	clean := seoBlockTagPattern.ReplaceAllString(raw, " ")
-	clean = seoEventAttrPattern.ReplaceAllString(clean, "")
-	clean = seoSchemeHrefPattern.ReplaceAllString(clean, `$1="#"`)
-	return strings.TrimSpace(clean)
+	return normalizeArticleMedia(strings.TrimSpace(articleHTMLPolicy.Sanitize(raw)))
 }
 
 // escapeHTML 转义 HTML 特殊字符
@@ -98,4 +103,32 @@ func localDate(timestamp int) string {
 		return ""
 	}
 	return text[:10]
+}
+
+// normalizeArticleMedia 修正正文中旧的相对图片，避免在 /content/... 下解析出错误地址。
+func normalizeArticleMedia(content string) string {
+	tokenizer := htmlparser.NewTokenizer(strings.NewReader(content))
+	var output strings.Builder
+	for {
+		kind := tokenizer.Next()
+		if kind == htmlparser.ErrorToken {
+			if tokenizer.Err() == io.EOF {
+				return output.String()
+			}
+			return content
+		}
+		if kind == htmlparser.StartTagToken || kind == htmlparser.SelfClosingTagToken {
+			token := tokenizer.Token()
+			if token.Data == "img" {
+				for i := range token.Attr {
+					if token.Attr[i].Key == "src" {
+						token.Attr[i].Val = publicMediaURL(token.Attr[i].Val)
+					}
+				}
+				output.WriteString(token.String())
+				continue
+			}
+		}
+		output.Write(tokenizer.Raw())
+	}
 }

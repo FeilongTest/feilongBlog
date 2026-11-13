@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"feilongBlog/global"
+	model "feilongBlog/model/blog"
 	"feilongBlog/model/common/response"
 	"feilongBlog/utils"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -14,7 +16,7 @@ func JWTAuth() gin.HandlerFunc {
 		// 我们这里jwt鉴权取头部信息 x-token 登录时回返回token信息 这里前端需要把token存储到cookie或者本地localStorage中 不过需要跟后端协商过期时间 可以约定刷新令牌或者重新登录
 		token := c.Request.Header.Get("x-token")
 		if token == "" {
-			response.FailWithDetailed(gin.H{"reload": true}, "未登录或非法访问", c)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: "未登录或非法访问"})
 			c.Abort()
 			return
 		}
@@ -23,11 +25,11 @@ func JWTAuth() gin.HandlerFunc {
 		claims, err := j.ParseToken(token)
 		if err != nil {
 			if err == utils.TokenExpired {
-				response.FailWithDetailed(gin.H{"reload": true}, "授权已过期", c)
+				c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: "授权已过期"})
 				c.Abort()
 				return
 			}
-			response.FailWithDetailed(gin.H{"reload": true}, err.Error(), c)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: err.Error()})
 			c.Abort()
 			return
 		}
@@ -37,7 +39,7 @@ func JWTAuth() gin.HandlerFunc {
 
 		//if user, err := userService.FindUserByUuid(claims.UUID.String()); err != nil || user.Enable == 2 {
 		//	_ = jwtService.JsonInBlacklist(system.JwtBlacklist{Jwt: token})
-		//	response.FailWithDetailed(gin.H{"reload": true}, err.Error(), c)
+		//	c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: err.Error()})
 		//	c.Abort()
 		//}
 		if claims.ExpiresAt-time.Now().Unix() < claims.BufferTime {
@@ -45,13 +47,13 @@ func JWTAuth() gin.HandlerFunc {
 			claims.ExpiresAt = time.Now().Add(dr).Unix()
 			newToken, err := j.CreateTokenByOldToken(token, *claims)
 			if err != nil {
-				response.FailWithDetailed(gin.H{"reload": true}, "刷新授权失败", c)
+				c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: "刷新授权失败"})
 				c.Abort()
 				return
 			}
 			newClaims, err := j.ParseToken(newToken)
 			if err != nil {
-				response.FailWithDetailed(gin.H{"reload": true}, "刷新授权失败", c)
+				c.AbortWithStatusJSON(http.StatusUnauthorized, response.Response{Code: response.ERROR, Data: gin.H{"reload": true}, Msg: "刷新授权失败"})
 				c.Abort()
 				return
 			}
@@ -59,6 +61,19 @@ func JWTAuth() gin.HandlerFunc {
 			c.Header("new-expires-at", strconv.FormatInt(newClaims.ExpiresAt, 10))
 		}
 		c.Set("claims", claims)
+		c.Next()
+	}
+}
+
+// AdminOnly 在所有后台接口执行前校验已验证的 JWT 管理员身份。
+func AdminOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, exists := c.Get("claims")
+		user, ok := claims.(*model.CustomClaims)
+		if !exists || !ok || user == nil || user.Admin != 1 {
+			c.AbortWithStatusJSON(http.StatusForbidden, response.Response{Code: response.ERROR, Msg: "仅管理员可以访问"})
+			return
+		}
 		c.Next()
 	}
 }

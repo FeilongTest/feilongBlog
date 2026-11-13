@@ -10,12 +10,17 @@
         <router-link to="/" class="btn btn-sm btn-light">返回首页</router-link>
       </div>
 
+      <div class="row g-3 mb-7" role="search" aria-label="筛选文章归档">
+        <div class="col-md-8"><input v-model="keyword" type="search" class="form-control form-control-solid" placeholder="搜索归档中的文章标题" aria-label="搜索归档标题" /></div>
+        <div class="col-md-4"><select v-model="selectedYear" class="form-select form-select-solid" aria-label="筛选归档年份"><option value="">全部年份</option><option v-for="year in years" :key="year" :value="year">{{ year }}</option></select></div>
+        <div v-if="keyword || selectedYear" class="d-flex align-items-center gap-3 fs-7"><span role="status">找到 {{ filtered.length }} 篇文章</span><button type="button" class="btn btn-sm btn-light" @click="clearFilters">清除筛选</button></div>
+      </div>
       <div v-if="loading" class="text-muted">正在整理归档…</div>
       <div v-else-if="loadError" class="text-center py-10">
         <h3>归档加载失败</h3>
         <button type="button" class="btn btn-sm btn-light-primary mt-4" @click="loadArchive">重新加载</button>
       </div>
-      <div v-else-if="!groups.length" class="text-muted">暂时还没有文章。</div>
+      <div v-else-if="!groups.length" class="text-muted">{{ entries.length ? "没有符合条件的文章，试试其他关键词或年份。" : "暂时还没有文章。" }}</div>
       <section v-for="group in groups" :key="group.year" class="mb-10">
         <h2 class="fs-3 text-gray-900 mb-4">{{ group.year }}</h2>
         <ul class="list-unstyled mb-0">
@@ -32,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { absoluteUrl, applySeo } from "@/core/seo";
 import { useSiteStore } from "@/stores/site";
@@ -45,6 +51,20 @@ interface ArchiveEntry {
   ctime: number;
 }
 
+const route = useRoute();
+const router = useRouter();
+const keyword = ref(String(route.query.q || ""));
+const selectedYear = ref(String(route.query.year || ""));
+const yearOf = (item: ArchiveEntry) => item.ctime ? dayjs.unix(Number(item.ctime)).format("YYYY") : "更早";
+const years = computed(() => Array.from(new Set(entries.value.map(yearOf))).sort((a,b) => b.localeCompare(a)));
+const filtered = computed(() => entries.value.filter(item => (!selectedYear.value || yearOf(item) === selectedYear.value) && item.title.toLocaleLowerCase().includes(keyword.value.trim().toLocaleLowerCase())));
+const clearFilters = () => { keyword.value = ""; selectedYear.value = ""; };
+let filterTimer: ReturnType<typeof setTimeout>;
+watch([keyword, selectedYear], () => {
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(() => { void router.replace({ query: { q: keyword.value || undefined, year: selectedYear.value || undefined } }); }, 250);
+});
+watch(() => route.query, query => { keyword.value = String(query.q || ""); selectedYear.value = String(query.year || ""); });
 const siteStore = useSiteStore();
 const entries = ref<ArchiveEntry[]>([]);
 const loading = ref(true);
@@ -52,7 +72,7 @@ const loadError = ref(false);
 
 const groups = computed(() => {
   const grouped = new Map<string, ArchiveEntry[]>();
-  entries.value.forEach((item) => {
+  filtered.value.forEach((item) => {
     const year = item.ctime ? dayjs.unix(Number(item.ctime)).format("YYYY") : "更早";
     const list = grouped.get(year) || [];
     list.push(item);
@@ -60,6 +80,8 @@ const groups = computed(() => {
   });
   return Array.from(grouped, ([year, items]) => ({ year, items }));
 });
+
+onBeforeUnmount(() => clearTimeout(filterTimer));
 
 const formatDate = (timestamp: number) => (timestamp ? dayjs.unix(Number(timestamp)).format("YYYY-MM-DD") : "");
 

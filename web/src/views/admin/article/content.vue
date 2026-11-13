@@ -1,5 +1,13 @@
 <template>
-  <div class="d-flex flex-column flex-lg-row">
+  <div>
+  <div v-if="loadingEditor" class="card card-body mb-5" role="status">正在加载编辑器…</div>
+  <div v-else-if="editorError" class="alert alert-danger" role="alert">文章加载失败，编辑已暂停，避免覆盖原文。<button class="btn btn-sm btn-light ms-3" @click="loadEditor">重新加载</button></div>
+  <div v-else-if="pendingDraft" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="status">
+    <span>发现未发布的本机草稿，恢复前请注意服务器文章可能已更新。</span>
+    <button class="btn btn-sm btn-primary" @click="draft.restore">恢复草稿</button>
+    <button class="btn btn-sm btn-light" @click="draft.discard">丢弃草稿</button>
+  </div>
+  <div v-if="!loadingEditor && !editorError" :inert="submitting" :aria-busy="submitting" class="d-flex flex-column flex-lg-row">
 
     <!-- 正文开始 -->
     <div class="flex-lg-row-fluid me-lg-15 order-2 order-lg-1 mb-10 mb-lg-0">
@@ -7,7 +15,7 @@
       <div class="card card-flush py-5 mb-5 mb-lg-10">
         <!--begin::Card body-->
         <div class="card-body pt-0">
-          <VForm id="kt_modal_create_api_key_form" class="form">
+          <VForm id="kt_modal_create_api_key_form" class="form" @submit="submitBtn">
 
             <!--begin::Input group-->
             <div class="mb-5 fv-row">
@@ -191,8 +199,13 @@
 
           <!--begin::Input group-->
           <div class="mt-5">
-            <button @click="submitBtn" class="form-control from-control-lg from-control-solid bg-info mb-3 mb-lg-0" style="color:aliceblue;">
-              {{ articleMode }}
+            <p class="text-muted fs-7" role="status" aria-live="polite">
+              <span v-if="storageError" class="text-danger">本机草稿保存失败，请及时发布或备份内容。</span>
+              <span v-else-if="savedAt">本机草稿已保存 {{ draftTime }}，尚未发布</span>
+              <span v-else>{{ dirty ? '正在保存本机草稿…' : '本机草稿保留 7 天，仅此浏览器可见' }}</span>
+            </p>
+            <button type="button" :disabled="submitting || uploading || !!pendingDraft" @click="submitBtn" class="form-control from-control-lg from-control-solid bg-info mb-3 mb-lg-0" style="color:aliceblue;">
+              {{ submitting ? "正在保存…" : articleMode }}
             </button>
           </div>
           <!--end::Input group-->
@@ -204,270 +217,163 @@
     </div>
     <!-- 侧边栏结束 -->
   </div>
+  </div>
 </template>
-<script lang="ts">
-import '@wangeditor/editor/dist/css/style.css' // 引入 css
-
-import { defineComponent,onBeforeUnmount, ref, shallowRef, onMounted,watch } from 'vue'
-import { getAssetPath } from "@/core/helpers/assets";
-import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
-import MarkdownEditor from '@/components/admin/MarkdownEditor.vue'
-import { ErrorMessage, Field, Form as VForm } from "vee-validate";
+<script setup lang="ts">
+import '@wangeditor/editor/dist/css/style.css';
+import { defineAsyncComponent, computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
+import { Editor, Toolbar } from '@wangeditor/editor-for-vue';
+import type { IDomEditor } from '@wangeditor/editor';
+const MarkdownEditor = defineAsyncComponent(() => import('@/components/admin/MarkdownEditor.vue'));
+import { ErrorMessage, Field, Form as VForm } from 'vee-validate';
+import { ElNotification } from 'element-plus';
+import Swal from 'sweetalert2';
+import { resolveMediaUrl } from '@/utils/media';
+import { getAssetPath } from '@/core/helpers/assets';
+import JwtService from '@/core/services/JwtService';
 import service from '@/utils/request';
-import JwtService from "@/core/services/JwtService";
-import { ElNotification } from 'element-plus'
-import { useRouter } from "vue-router";
-import type { CategoryList } from "@/core/blog/CategoryTypes"
-import type { ArticleList } from "@/core/blog/ArticleTypes"
-import Swal from "sweetalert2";
+import { useAuthStore } from '@/stores/auth';
+import { useLocalDraft } from '@/composables/useLocalDraft';
+import type { CategoryList } from '@/core/blog/CategoryTypes';
+import type { ArticleList } from '@/core/blog/ArticleTypes';
 
+interface ArticleDraft {
+  title: string; fid: number; type: number; contentFormat: 'html' | 'markdown';
+  html: string; markdown: string; pic: string;
+}
+const route = useRoute();
+const router = useRouter();
+const auth = useAuthStore();
+const category = ref<CategoryList[]>([]);
+const articleInfo = ref<Partial<ArticleList>>({ title: '', type: 1, contentFormat: 'html' });
+const valueHtml = ref('');
+const markdownValue = ref('');
+const data = ref({ img: '/media/svg/files/blank-image.svg', imgStr: '' });
+const editorRef = shallowRef<IDomEditor>();
+const mode = 'default';
+const toolbarConfig = {};
+const loadingEditor = ref(true);
+const editorError = ref(false);
+const submitting = ref(false);
+const uploading = ref(false);
+let loadSequence = 0;
+const articleMode = computed(() => articleInfo.value.ID ? '保存修改' : '发布文章');
+const snapshot = (): ArticleDraft => ({
+  title: articleInfo.value.title || '', fid: Number(articleInfo.value.fid || 0), type: Number(articleInfo.value.type ?? 1),
+  contentFormat: articleInfo.value.contentFormat || 'html', html: valueHtml.value === '<p><br></p>' ? '' : valueHtml.value, markdown: markdownValue.value, pic: data.value.imgStr,
+});
+const applyDraft = (draft: ArticleDraft) => {
+  Object.assign(articleInfo.value, { title: draft.title, fid: draft.fid, type: draft.type, contentFormat: draft.contentFormat });
+  valueHtml.value = draft.html;
+  markdownValue.value = draft.markdown;
+  data.value = { img: draft.pic || '/media/svg/files/blank-image.svg', imgStr: draft.pic };
+};
+const validateDraft = (value: unknown): value is ArticleDraft => {
+  const d = value as ArticleDraft;
+  return !!d && typeof d.title === 'string' && Number.isInteger(d.fid) && [0, 1].includes(d.type)
+    && ['html', 'markdown'].includes(d.contentFormat) && typeof d.html === 'string' && typeof d.markdown === 'string' && typeof d.pic === 'string';
+};
+const draft = useLocalDraft(snapshot, applyDraft, validateDraft);
+const { dirty, savedAt, storageError, pending: pendingDraft } = draft;
+const draftTime = computed(() => savedAt.value ? new Date(savedAt.value).toLocaleTimeString('zh-CN') : '');
 
-export default defineComponent({
-  name: "admin-article-content",
-  components: {
-    Editor,
-    Toolbar,
-    MarkdownEditor,
-    ErrorMessage,
-    Field,
-    VForm,
-  },
-  setup() {
+async function loadEditor() {
+  const sequence = ++loadSequence;
+  draft.pause();
+  loadingEditor.value = true;
+  editorError.value = false;
+  try {
+    const id = route.params.id ? Number(route.params.id) : 0;
+    if (!Number.isInteger(id) || id < 0) throw new Error('文章编号不合法');
+    const [profile, categories, article] = await Promise.all([
+      auth.user?.user?.ID ? Promise.resolve(auth.user.user) : auth.refreshProfile(),
+      service.get('/base/getCategoryList'),
+      id ? service.post('/admin/article/getArticle', { id }) : Promise.resolve({ data: undefined }),
+    ]);
+    if (sequence !== loadSequence) return;
+    if (!profile?.ID) throw new Error('无法获取账户资料');
+    category.value = categories.data || [];
+    const first = category.value.find(item => item.fid !== 0) || category.value[0];
+    articleInfo.value = article.data || { title: '', type: 1, contentFormat: 'html', fid: first?.ID || 0 };
+    articleInfo.value.contentFormat ||= 'html';
+    valueHtml.value = articleInfo.value.contentFormat === 'html' ? articleInfo.value.content || '' : '';
+    markdownValue.value = articleInfo.value.contentFormat === 'markdown' ? articleInfo.value.content || '' : '';
+    const pic = resolveMediaUrl(articleInfo.value.pic);
+    data.value = { img: pic || '/media/svg/files/blank-image.svg', imgStr: pic };
+    draft.initialize(`${profile.ID}:${id || 'new'}`);
+  } catch { if (sequence === loadSequence) editorError.value = true; }
+  finally { if (sequence === loadSequence) loadingEditor.value = false; }
+}
 
-    // 本地存储返回相对路径，R2 返回完整 URL；两种存储方式都需要兼容。
-    const resolveUploadedUrl = (url: string): string => {
-      const value = url?.trim();
-      if (!value) return "";
-      if (/^(?:https?:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value) || value.startsWith("/")) {
-        return value;
-      }
-      if (value.startsWith("public/")) {
-        return value;
-      }
-      return `public/${value.replace(/^\.\//, "")}`;
-    };
-    const category = ref<Array<CategoryList>>([]);
-    const articleInfo = ref<ArticleList>({} as ArticleList);
-    const articleMode = ref("新增");
-
-
-
-    // 编辑器实例，必须用 shallowRef
-    const editorRef = shallowRef()
-
-    // 内容 HTML
-    const valueHtml = ref('')
-    const markdownValue = ref('')
-
-
-    const router = useRouter();
-
-    // 模拟 ajax 异步获取内容
-    onMounted(() => {
-      //判断当前是否拥有id
-      const currentRoute = router.currentRoute.value;
-      
-      if (currentRoute.params.id != "") {
-          articleMode.value = "更新"
-          getArticle(Number(currentRoute.params.id));
-      }else{
-        articleInfo.value.type = 1
-        articleInfo.value.contentFormat = 'html'
-      }
-    
-      //获取分类列表
-      getMenuList();      
-    })
-
-    const toolbarConfig = {}
-
-    //自定义图片插入类型
-    type InsertFnType = (url: string, alt: string, href: string) => void
-
-    const editorConfig = { 
-      placeholder: '请输入内容...',
-      // 菜单配置
-      MENU_CONF: {
-        uploadImage: {
-          server: (import.meta.env.VITE_BLOG_API_URL || '/blog') + "/admin/file/upload", // 上传图片地址
-          fieldName: 'file',
-          headers: {
-            "x-token":`${JwtService.getToken()}`,
-          },
-          customInsert(res: any, insertFn: InsertFnType): void{
-            if(res.code == 0){
-              insertFn(resolveUploadedUrl(res.data.url),res.data.alt,"")
-              ElNotification({
-                duration:1500,
-                title: 'success',
-                message: "上传成功",
-                type: 'success',
-              })
-            }else{
-              ElNotification({
-                duration:1500,
-                title: 'error',
-                message: "上传失败",
-                type: 'error',
-              })
-            }
-          },
-          // 单个文件的最大体积限制，默认为 2M
-          maxFileSize: 2 * 1024 * 1024, // 1M
-
-          // 选择文件时的类型限制，默认为 ['image/*'] 。如不想限制，则设置为 []
-          allowedFileTypes: ['image/*'],
-
-          // 小于该值就插入 base64 格式（而不上传），默认为 0
-          base64LimitSize: 5 * 1024 // 5kb
-        
-        },
-      },
-    }
-    // 组件销毁时，也及时销毁编辑器
-    onBeforeUnmount(() => {
-      const editor = editorRef.value
-      if (editor == null) return
-      editor.destroy()
-    })
-
-    const handleCreated = (editor) => {
-      editorRef.value = editor // 记录 editor 实例，重要！
-    }
-
-
-    const submitBtn = () => {
-      let url = "/admin/article/updateArticle"
-      let method = "put"
-      let postData = {}
-      postData = {
-        ...articleInfo.value
-      }
-      postData = {
-        ...articleInfo.value,
-        content:articleInfo.value.contentFormat === 'markdown' ? markdownValue.value : valueHtml.value,
-        pic:Number(articleInfo.value.type) === 0 ? "" : data.value.imgStr
-      }
-      if(articleMode.value == "新增"){
-        url = "/admin/article/createArticle"
-        method = "post"
-      }
-      service({
-        url,
-        method,
-        data:postData
-      }).then(({data}) => {
-        if(data != undefined){
-          Swal.fire({
-              title:articleMode.value +"成功",
-              icon:"success",
-              showCancelButton:true,
-            })
-        }
-      })
-    }
-
-    const data = ref({
-      img: "/media/svg/files/blank-image.svg",
-      imgStr: ""
-      //初始化给一个默认图
-    });
-
-    //异步加载完成后需要重新渲染缩略图
-
-    //移除图片方法
-    const removeImage = () => {
-      data.value.img = "/media/svg/files/blank-image.svg";
-      data.value.imgStr = "";
-    };
-
-    //改变缩略图方法
-    const changeImage = (e: any) => {
-      const files = e.target.files;
-      uploadImg(files[0])
-    }
-
-    const uploadImg = (img: any) => {
-      let formdata = new FormData()
-      formdata.append("file", img) //将每一个文件图片都加进formdata
-      service.post("/admin/file/upload", formdata)
-      .then(res => {
-        const imageUrl = resolveUploadedUrl(res.data.url);
-        data.value.img = imageUrl;
-        data.value.imgStr = imageUrl;
-      })  
-    }
-
-    const getMenuList = () => {
-      service.get("/base/getCategoryList")
-        .then(res => {
-          category.value = res.data
-          if (articleMode.value === "新增" && !articleInfo.value.fid) {
-            const firstCategory = category.value.find(item => item.fid !== 0)
-              || category.value.find(item => item.fid === 0)
-            articleInfo.value.fid = firstCategory?.ID || 0
-          }
-        })
-    }
-
-    const getArticle = (id:Number) => {
-      service.post("/admin/article/getArticle",{id:id})
-        .then(res => {
-          articleInfo.value = res.data
-          articleInfo.value.contentFormat = articleInfo.value.contentFormat || 'html'
-          if (articleInfo.value.contentFormat === 'markdown') {
-            markdownValue.value = articleInfo.value.content
-          } else {
-            valueHtml.value = articleInfo.value.content
-          }
-          data.value.img = articleInfo.value.pic
-          data.value.imgStr = articleInfo.value.pic
-        })
-    }
-
-    const getImg = (path:string) => {
-      if(path.includes("/media/")){
-        return getAssetPath(path);
-      }
-      return path;
-    }
-
-    //监视路由判断是否页面跳转
-    watch(
-      () => router.currentRoute.value,
-      (newValue: any, oldValue: any) => {
-        //更新文章页面直接进入添加文章旧数据会保留,刷新页面得以重置
-        if(oldValue.name == "admin-article-content" && newValue.name == "admin-article-content"){
-           if (Object.keys(oldValue.params).length !== 0) {
-            //省略数据重置
-            router.go(0);       
-          }
-        }        
-      },
-    )
-
-    return {
-      getAssetPath,
-      editorRef,
-      valueHtml,
-      markdownValue,
-      mode: 'default', // 或 'simple'
-      toolbarConfig,
-      editorConfig,
-      handleCreated,
-      data,
-      removeImage,
-      changeImage,
-      category,
-      articleInfo,
-      submitBtn,
-      articleMode,
-      getImg,
-    };
+async function mayLeave() {
+  if (submitting.value || uploading.value) return false;
+  draft.flush();
+  if (!dirty.value) return true;
+  const { isConfirmed } = await Swal.fire({ title: '离开编辑页面？', text: storageError.value ? '本机草稿未能保存，离开可能丢失修改。' : '修改尚未发布，已保存在本机草稿中。', icon: 'warning', showCancelButton: true, confirmButtonText: '离开页面', cancelButtonText: '继续编辑' });
+  return isConfirmed;
+}
+onBeforeRouteLeave(mayLeave);
+onBeforeRouteUpdate((to, from) => to.params.id === from.params.id || mayLeave());
+const beforeUnload = (event: BeforeUnloadEvent) => {
+  if (!dirty.value && !submitting.value && !uploading.value) return;
+  draft.flush(); event.preventDefault(); event.returnValue = '';
+};
+onMounted(() => { window.addEventListener('beforeunload', beforeUnload); void loadEditor(); });
+watch(() => route.params.id, () => { void loadEditor(); });
+onBeforeUnmount(() => { ++loadSequence; window.removeEventListener('beforeunload', beforeUnload); editorRef.value?.destroy(); });
+const handleCreated = (editor: IDomEditor) => { editorRef.value = editor; };
+const getImg = (path: string) => path.includes('/media/') ? getAssetPath(path) : resolveMediaUrl(path);
+const removeImage = () => { data.value = { img: '/media/svg/files/blank-image.svg', imgStr: '' }; };
+async function changeImage(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || uploading.value) return;
+  uploading.value = true;
+  try {
+    const form = new FormData(); form.append('file', file);
+    const response = await service.post('/admin/file/upload', form);
+    const pic = resolveMediaUrl(response.data.url);
+    data.value = { img: pic, imgStr: pic };
+  } catch { /* 请求拦截器已显示上传失败原因。 */ }
+  finally { uploading.value = false; input.value = ''; }
+}
+const editorConfig = {
+  placeholder: '请输入内容...',
+  MENU_CONF: { uploadImage: {
+    server: (import.meta.env.VITE_BLOG_API_URL || '/blog') + '/admin/file/upload', fieldName: 'file',
+    headers: { 'x-token': JwtService.getToken() || '' }, maxFileSize: 10 * 1024 * 1024,
+    allowedFileTypes: ['image/*'], base64LimitSize: 0,
+    customInsert(response: any, insert: (url: string, alt: string, href: string) => void) {
+      if (response.code === 0) insert(resolveMediaUrl(response.data.url), response.data.alt || '', '');
+      else ElNotification({ title: '上传失败', message: response.msg || '请重试', type: 'error' });
+    },
+  } },
+};
+async function submitBtn() {
+  if (submitting.value || uploading.value || loadingEditor.value || editorError.value || pendingDraft.value) return;
+  const current = snapshot();
+  if (!current.title.trim() || !current.fid) {
+    ElNotification({ title: '请完善文章', message: '请填写标题并选择分类', type: 'warning' }); return;
   }
-})
+  submitting.value = true;
+  try {
+    const id = articleInfo.value.ID;
+    const response = await service({ url: id ? '/admin/article/updateArticle' : '/admin/article/createArticle', method: id ? 'put' : 'post', data: {
+      ...articleInfo.value, title: current.title.trim(), fid: current.fid, type: current.type,
+      content: current.contentFormat === 'markdown' ? current.markdown : current.html,
+      contentFormat: current.contentFormat, pic: current.type === 0 ? '' : resolveMediaUrl(current.pic),
+    } });
+    draft.markSaved(current);
+    ElNotification({ title: id ? '保存成功' : '发布成功', message: '文章已保存到服务器', type: 'success' });
+    submitting.value = false;
+    if (!id && response.data?.id) await router.replace({ name: 'admin-article-content', params: { id: response.data.id } });
+    else if (!id) await router.replace({ name: 'admin-article-index' });
+  } catch { draft.flush(); }
+  finally { submitting.value = false; }
+}
+</script>
 
-</script>    
 
 <style lang="scss" scoped>
 .editor—wrapper {

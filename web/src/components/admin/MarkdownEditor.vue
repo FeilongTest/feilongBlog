@@ -7,6 +7,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import service from "@/utils/request";
+import { resolveMediaUrl } from "@/utils/media";
 import JwtService from "@/core/services/JwtService";
 
 const props = defineProps<{ modelValue: string }>();
@@ -14,13 +15,9 @@ const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 const editorElement = ref<HTMLElement>();
 let editor: Vditor | undefined;
 let applyingExternalValue = false;
+let ready = false;
 
-const resolveUploadedUrl = (url: string) => {
-  const value = url?.trim();
-  if (!value) return "";
-  if (/^(?:https?:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value) || value.startsWith("/")) return value;
-  return value.startsWith("public/") ? value : `public/${value.replace(/^\.\//, "")}`;
-};
+const resolveUploadedUrl = resolveMediaUrl;
 
 const uploadImages = async (files: File[]) => {
   for (const file of files) {
@@ -40,6 +37,8 @@ onMounted(async () => {
   await nextTick();
   if (!editorElement.value) return;
   editor = new Vditor(editorElement.value, {
+    cdn: `${window.location.origin}/vendor/vditor`,
+    after: () => { ready = true; editor?.setValue(props.modelValue || "", true); },
     height: 500,
     mode: "ir",
     value: props.modelValue || "",
@@ -65,7 +64,7 @@ onMounted(async () => {
 watch(
   () => props.modelValue,
   (value) => {
-    if (!editor || editor.getValue() === value) return;
+    if (!editor || !ready || editor.getValue() === value) return;
     applyingExternalValue = true;
     editor.setValue(value || "", true);
     applyingExternalValue = false;

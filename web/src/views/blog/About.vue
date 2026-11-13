@@ -9,7 +9,7 @@
 
         <div class="d-flex align-items-center border border-dashed card-rounded p-6 mb-10">
           <div class="symbol symbol-70px symbol-circle me-6 flex-shrink-0">
-            <img class="about-avatar" :src="avatarUrl" :alt="authorName" @error="useDefaultAvatar" />
+            <AuthorAvatar class="about-avatar" :src="profile.pic" :alt="authorName" />
           </div>
           <div>
             <div class="text-gray-900 fw-bold fs-4">{{ authorName }}</div>
@@ -29,9 +29,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted } from "vue";
 import { absoluteUrl, applySeo } from "@/core/seo";
-import { getAssetPath } from "@/core/helpers/assets";
+import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
+import { resolveMediaUrl } from "@/utils/media";
 import { useAuthStore, type PublicProfile } from "@/stores/auth";
 import { useSiteStore } from "@/stores/site";
 
@@ -40,38 +41,13 @@ const authStore = useAuthStore();
 const site = computed(() => siteStore.setting);
 const profile = computed<PublicProfile>(() => authStore.publicProfile || { trueName: "", email: "", pic: "", bio: "" });
 const authorName = computed(() => profile.value.trueName || site.value.author || site.value.siteName);
-const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
-const avatarFailed = ref(false);
-
-// 旧头像存在 ./Public/Uploads，实际文件在图片域名的 legacy 目录
-const resolveAvatar = (raw?: string) => {
-  const value = (raw || "").trim();
-  if (!value) return "";
-  if (/^(?:https?:)?\/\//i.test(value)) return value;
-  const cleaned = value.replace(/^\.?\//, "");
-  const marker = "public/uploads/";
-  const index = cleaned.toLowerCase().indexOf(marker);
-  if (index >= 0) {
-    return `https://img.teshh.com/legacy/Public/Uploads/${cleaned.slice(index + marker.length)}`;
-  }
-  return value.startsWith("/") ? value : `/${cleaned}`;
-};
-
-const avatarUrl = computed(() => (avatarFailed.value ? defaultAvatar : resolveAvatar(profile.value.pic) || defaultAvatar));
-const useDefaultAvatar = (event: Event) => {
-  const image = event.currentTarget as HTMLImageElement;
-  if (avatarFailed.value) return;
-  avatarFailed.value = true;
-  image.src = defaultAvatar;
-};
-
 onMounted(async () => {
   const setting = await siteStore.loadSiteSetting();
   const contact = await authStore.refreshPublicProfile().catch(() => undefined);
   const name = contact?.trueName || setting.author || setting.siteName;
   const description = contact?.bio || setting.description;
   const canonical = absoluteUrl("/about");
-  const avatar = resolveAvatar(contact?.pic);
+  const avatar = resolveMediaUrl(contact?.pic);
   applySeo({
     title: `关于 - ${setting.siteName}`,
     description,

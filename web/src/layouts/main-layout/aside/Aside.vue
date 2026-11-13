@@ -36,7 +36,7 @@
         <div class="d-flex align-items-center">
           <!--begin::Avatar-->
           <div class="symbol symbol-circle symbol-40px">
-            <img class="account-avatar account-avatar-40" :src="avatarUrl" alt="" @error="useDefaultAvatar" />
+            <AuthorAvatar class="account-avatar account-avatar-40" :src="avatarUrl" />
           </div>
           <!--end::Avatar-->
 
@@ -86,6 +86,7 @@
 </template>
 
 <script lang="ts">
+import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
 import { getAssetPath } from "@/core/helpers/assets";
 import { computed, defineComponent, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
@@ -98,6 +99,7 @@ import { asideTheme } from "@/core/helpers/config";
 export default defineComponent({
   name: "KTAside",
   components: {
+    AuthorAvatar,
     KTMenu,
     KTAdminMenu,
     UserMenu,
@@ -111,19 +113,13 @@ export default defineComponent({
     const authStore = useAuthStore();
     const profile = computed(() => authStore.user?.user);
     const publicProfile = computed(() => authStore.publicProfile);
-    const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
-    const avatarUrl = computed(() => (authStore.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || defaultAvatar);
+    const avatarUrl = computed(() => (authStore.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || "");
     const displayName = computed(() => authStore.isAuthenticated
       ? (profile.value?.truename || profile.value?.userName || "飞龙Test")
       : (publicProfile.value?.trueName || "飞龙Test"));
     const displayMeta = computed(() => authStore.isAuthenticated
       ? (profile.value?.bio || "Golang Dev")
       : (publicProfile.value?.bio || "Golang Dev"));
-    const useDefaultAvatar = (event: Event) => {
-      const image = event.currentTarget as HTMLImageElement;
-      if (image.src.endsWith(defaultAvatar)) return;
-      image.src = defaultAvatar;
-    };
     onMounted(() => {
       if (authStore.isAuthenticated && !profile.value) authStore.refreshProfile().catch(() => undefined);
       if (!authStore.isAuthenticated && !publicProfile.value?.bio) authStore.refreshPublicProfile().catch(() => undefined);
@@ -137,7 +133,6 @@ export default defineComponent({
       avatarUrl,
       displayName,
       displayMeta,
-      useDefaultAvatar,
     };
   },
 });

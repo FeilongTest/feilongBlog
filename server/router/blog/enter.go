@@ -48,7 +48,7 @@ func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {
 	apiRouterWithoutRecord := Router.Group("article")
 	apiRouterApi := v1.ApiGroupApp.ArticleApiGroup
 	{
-		apiRouterWithoutRecord.POST("getArticle", apiRouterApi.GetArticle)
+		apiRouterWithoutRecord.POST("getArticle", apiRouterApi.GetArticleAdmin)
 		apiRouterWithoutRecord.GET("getArticleList", apiRouterApi.GetArticleListAdmin)
 		apiRouterWithoutRecord.POST("createArticle", apiRouterApi.CreateArticle)
 		apiRouterWithoutRecord.DELETE("delArticle", apiRouterApi.DelArticleById)

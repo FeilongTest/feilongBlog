@@ -105,7 +105,10 @@ func (s *SeoService) RenderPage(path, rawQuery string) (page string, status int,
 	if err != nil {
 		return "", 500, err
 	}
-	seo, status := s.buildPageSeo(path, rawQuery)
+	seo, status, err := s.buildPageSeo(path, rawQuery)
+	if err != nil {
+		return "", status, err
+	}
 	return s.inject(template, seo), status, nil
 }
 

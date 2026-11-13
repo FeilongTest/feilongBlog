@@ -39,6 +39,7 @@ func (s *UserService) Login(u *model.User) (userInter *model.User, err error) {
 			}
 		}
 	}
+	user.Pic = publicMediaURL(user.Pic)
 	return &user, err
 }
 
@@ -77,6 +78,7 @@ func (s *UserService) ChangePassword(userID uint, currentPassword, newPassword s
 
 func (s *UserService) GetProfile(userID uint) (user model.User, err error) {
 	err = global.BLOG_DB.First(&user, userID).Error
+	user.Pic = publicMediaURL(user.Pic)
 	return user, err
 }
 
@@ -91,6 +93,7 @@ func (s *UserService) UpdateProfile(userID uint, input model.UpdateProfile) (use
 		return user, err
 	}
 	err = global.BLOG_DB.First(&user, userID).Error
+	user.Pic = publicMediaURL(user.Pic)
 	return user, err
 }
 

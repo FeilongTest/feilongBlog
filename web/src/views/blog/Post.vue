@@ -40,7 +40,13 @@
                 </div>
               </div>
 
-              <span class="text-dark text-hover-primary fs-2 fw-bold">{{ articleInfo.title }}</span>
+              <h1 class="text-dark fs-2 fw-bold">{{ articleInfo.title }}</h1>
+              <div class="d-flex flex-wrap align-items-center gap-3 mt-4 mb-5">
+                <span class="text-muted fs-7" data-testid="reading-stats">{{ stats.count }} 字词 · 约 {{ stats.minutes }} 分钟阅读</span>
+                <button type="button" class="btn btn-sm btn-light-primary" @click="copyArticleLink">复制文章链接</button>
+                <button v-if="canShare" type="button" class="btn btn-sm btn-light" @click="shareArticle">分享文章</button>
+                <span class="text-muted fs-7" role="status" aria-live="polite">{{ shareStatus }}</span>
+              </div>
 
               <button
                 v-if="articleInfo.type !== 0 && articleInfo.pic"
@@ -58,7 +64,7 @@
             <div class="d-flex align-items-center border border-dashed card-rounded p-5 p-lg-10 mb-14">
               <div class="text-center flex-shrink-0 me-7 me-lg-13">
                 <div class="symbol symbol-70px symbol-circle mb-2">
-                  <img :src="getAssetPath('/media/avatars/300-1.jpg')" alt="飞龙" />
+                  <AuthorAvatar />
                 </div>
                 <div>
                   <router-link to="/about" class="text-gray-700 text-hover-primary fw-bold">飞龙</router-link>
@@ -217,6 +223,9 @@
 </template>
 
 <script setup lang="ts">
+import { copyText } from "@/utils/clipboard";
+import { readingStats } from "@/utils/reading";
+import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import dayjs from "dayjs";
@@ -302,6 +311,15 @@ const renderedArticle = computed(() => {
 });
 const sanitizedContent = computed(() => renderedArticle.value.html);
 const toc = computed(() => renderedArticle.value.toc);
+const stats = computed(() => readingStats(sanitizedContent.value));
+const canShare = typeof navigator.share === "function";
+const shareStatus = ref("");
+const articleLink = () => absoluteUrl(`/content/${articleInfo.value.fid}/${articleInfo.value.ID}`);
+const copyArticleLink = async () => { shareStatus.value = await copyText(articleLink()) ? "链接已复制" : "复制失败，请从地址栏复制链接"; };
+const shareArticle = async () => {
+  try { await navigator.share({ title: articleInfo.value.title, url: articleLink() }); shareStatus.value = ""; }
+  catch (error) { if ((error as Error).name !== "AbortError") await copyArticleLink(); }
+};
 
 const formatDateTime = (timestamp?: number) =>
   timestamp ? dayjs.unix(Number(timestamp)).format("YYYY年MM月DD日 HH时mm分") : "";
@@ -315,14 +333,15 @@ const enhanceCodeBlocks = async () => {
     const code = pre.querySelector<HTMLElement>("code");
     if (code) Prism.highlightElement(code);
 
+    pre.querySelectorAll(".article-code-copy").forEach(button => button.remove());
+    const codeText = code?.textContent || pre.textContent || "";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "article-code-copy";
     button.textContent = "复制";
     button.setAttribute("aria-label", "复制代码");
     button.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(code?.textContent || pre.textContent || "");
-      button.textContent = "已复制";
+      button.textContent = await copyText(codeText) ? "已复制" : "复制失败，请手动选择代码";
       window.setTimeout(() => (button.textContent = "复制"), 1600);
     });
     pre.appendChild(button);
@@ -393,6 +412,7 @@ const getArticle = async (id: number) => {
   const sequence = ++requestSequence;
   loading.value = true;
   loadError.value = false;
+  shareStatus.value = "";
   activeHeading.value = "";
   readingProgress.value = 0;
   aside.value = { related: [], hot: [] };

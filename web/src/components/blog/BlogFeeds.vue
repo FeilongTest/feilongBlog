@@ -3,7 +3,7 @@
     <div class="card-body pb-5">
       <div class="d-flex align-items-center mb-5">
         <div class="symbol symbol-45px me-5">
-          <img :src="getAssetPath('/media/avatars/300-1.jpg')" alt="飞龙" />
+          <AuthorAvatar />
         </div>
         <div class="d-flex flex-column flex-grow-1 min-w-0">
           <router-link :to="articleUrl" class="feed-title text-gray-900 text-hover-primary fs-6 fw-bold">
@@ -26,7 +26,7 @@
       </router-link>
 
       <div v-if="article.type === 0" class="feed-content-full text-gray-800 fs-6 fw-normal mb-5" v-html="sanitizedContent"></div>
-      <p v-else class="feed-content text-gray-800 fs-6 fw-normal mb-5">{{ getExcerpt(article.content, 180) }}</p>
+      <p v-else class="feed-content text-gray-800 fs-6 fw-normal mb-5">{{ article.summary ?? getExcerpt(article.content, 180, article.contentFormat) }}</p>
 
       <div class="d-flex align-items-center">
         <router-link :to="articleUrl" class="btn btn-sm btn-light btn-color-muted btn-active-light-primary px-4 py-2 me-4">
@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
 import { computed, ref } from "vue";
 import dayjs from "dayjs";
 import type { ArticleList } from "@/core/blog/ArticleTypes";
@@ -61,6 +62,7 @@ import { getExcerpt } from "@/utils/html";
 import service from "@/utils/request";
 import { getLikedArticles, getVisitorId, saveArticleLike } from "@/utils/visitor";
 import DOMPurify from "dompurify";
+import { resolveMediaUrl } from "@/utils/media";
 
 const props = defineProps<{ article: ArticleList }>();
 const imageFailed = ref(false);
@@ -69,12 +71,7 @@ const liking = ref(false);
 const likeCount = ref(props.article.likeCount || 0);
 const sanitizedContent = computed(() => DOMPurify.sanitize(props.article.content || ""));
 const articleUrl = computed(() => `/content/${props.article.fid}/${props.article.ID}`);
-const imageUrl = computed(() => {
-  const value = props.article.pic?.trim();
-  if (!value || /^(https?:)?\/\//i.test(value)) return value;
-  return value.startsWith("/") ? value : `/${value}`;
-});
-
+const imageUrl = computed(() => resolveMediaUrl(props.article.pic));
 const toggleLike = async () => {
   if (liking.value) return;
   liking.value = true;

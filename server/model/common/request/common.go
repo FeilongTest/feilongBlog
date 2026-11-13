@@ -26,3 +26,19 @@ type GetAuthorityId struct {
 }
 
 type Empty struct{}
+
+// Normalize 限制分页大小，避免缺省或负值触发无界查询。
+func (p *PageInfo) Normalize() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.Page > 1000000 {
+		p.Page = 1000000
+	}
+	if p.PageSize < 1 {
+		p.PageSize = 10
+	}
+	if p.PageSize > 100 {
+		p.PageSize = 100
+	}
+}

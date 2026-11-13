@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
@@ -21,13 +22,13 @@
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "animate.css": "^4.1.1",
-    "axios": "^1.19.0",
+    "axios": "^1.21.1",
     "bootstrap": "5.2.3",
     "bootstrap-icons": "^1.9.1",
     "dayjs": "^1.11.21",
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.17",
     "element-plus": "^2.14.4",
-    "markdown-it": "^14.1.0",
+    "markdown-it": "^14.3.3",
     "object-path": "^0.11.8",
     "pinia": "^3.0.4",
     "prism-themes": "^1.9.0",
@@ -35,13 +36,14 @@
     "sweetalert2": "^11.26.25",
     "vditor": "^3.11.2",
     "vee-validate": "^4.5.11",
-    "vue": "^3.5.41",
-    "vue-i18n": "^11.4.8",
+    "vue": "^3.5.45",
+    "vue-i18n": "^11.4.19",
     "vue-inline-svg": "^3.1.0",
     "vue-router": "^4.1.5",
     "yup": "^0.32.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@rushstack/eslint-patch": "^1.1.4",
     "@tsconfig/node22": "^22.0.5",
     "@types/array-sort": "^1.0.0",
@@ -60,7 +62,8 @@
     "prettier": "^2.7.1",
     "sass": "1.55.0",
     "typescript": "^5.9.3",
-    "vite": "^6.4.3",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^6.4.6",
     "vue-tsc": "^3.3.9"
   }
 }

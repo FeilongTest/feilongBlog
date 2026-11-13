@@ -76,6 +76,7 @@ func (a *ArticleApi) GetArticleList(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
+	pageInfo.Normalize()
 	if list, total, err := articleApi.GetArticleList(pageInfo); err != nil {
 		response.FailWithMessage(err.Error(), c)
 	} else {
@@ -97,6 +98,7 @@ func (a *ArticleApi) GetArticleListAdmin(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
+	pageInfo.Normalize()
 	if list, total, err := articleApi.GetArticleListAdmin(pageInfo); err != nil {
 		response.FailWithMessage(err.Error(), c)
 	} else {
@@ -130,6 +132,26 @@ func (a *ArticleApi) GetArticle(c *gin.Context) {
 	}
 }
 
+// GetArticleAdmin 仅供后台编辑读取文章。
+func (a *ArticleApi) GetArticleAdmin(c *gin.Context) {
+	var req request.GetById
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	err = utils.Verify(req, utils.IdVerify)
+	if err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	if article, err := articleApi.GetArticleAdmin(req.ID); err != nil {
+		response.FailWithMessage(err.Error(), c)
+	} else {
+		response.OkWithDetailed(article, "获取成功", c)
+	}
+}
+
 // CreateArticle 创建文章
 func (a *ArticleApi) CreateArticle(c *gin.Context) {
 	var article model.Article
@@ -144,13 +166,13 @@ func (a *ArticleApi) CreateArticle(c *gin.Context) {
 		return
 	}
 
-	err = articleApi.CreateArticle(article)
+	err = articleApi.CreateArticle(&article)
 	if err != nil {
 		global.BLOG_LOG.Error("创建失败!", zap.Error(err))
 		response.FailWithMessage("创建失败", c)
 		return
 	}
-	response.OkWithMessage("创建成功", c)
+	response.OkWithDetailed(gin.H{"id": article.ID}, "创建成功", c)
 }
 
 // UpdateArticleById 更新文章

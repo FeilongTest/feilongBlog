@@ -8,6 +8,7 @@ type Article struct {
 	ID            uint      `gorm:"primarykey"` // 主键ID
 	Title         string    `json:"title" gorm:"title;comment:标题"`
 	Content       string    `json:"content" gorm:"type:text;column:content;comment:文章内容"`
+	Summary       string    `json:"summary" gorm:"-"` // 列表摘要，不写数据库
 	ContentFormat string    `json:"contentFormat" gorm:"type:varchar(16);column:content_format;default:html;comment:内容格式"`
 	Pic           string    `json:"pic" gorm:"pic;comment:图片"`
 	Uid           int       `json:"uid" gorm:"uid;comment:用户id"`

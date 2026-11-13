@@ -19,7 +19,7 @@ var seoService = blog.SeoService{}
 // 后端接口前缀，这些地址不能返回 HTML
 // 注意：后台页面使用 /admin 开头的地址，因此这里不能包含 /admin，
 // 真正的后台接口已经注册为 Gin 路由，不会走到 NoRoute
-var apiPathPrefixes = []string{"/blog", "/base", "/health"}
+var apiPathPrefixes = []string{"/blog", "/base", "/article", "/health"}
 
 // RenderPage 为前台路由注入 SEO 信息，未命中接口的请求都会走到这里
 func (a *SeoApi) RenderPage(c *gin.Context) {

@@ -11,7 +11,7 @@
       <div class="menu-content d-flex align-items-center px-3">
         <!--begin::Avatar-->
         <div class="symbol symbol-50px me-5">
-          <img class="account-avatar-50" alt="" :src="avatarUrl" @error="useDefaultAvatar" />
+          <AuthorAvatar class="account-avatar-50" :src="avatarUrl" />
         </div>
         <!--end::Avatar-->
 
@@ -53,6 +53,7 @@
 </template>
 
 <script lang="ts">
+import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
 import { getAssetPath } from "@/core/helpers/assets";
 import { defineComponent, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
@@ -61,25 +62,21 @@ import { MenuComponent } from "@/assets/ts/components";
 
 export default defineComponent({
   name: "kt-user-menu",
-  components: {},
+  components: {
+    AuthorAvatar,
+  },
   setup() {
     const router = useRouter();
     const store = useAuthStore();
     const profile = computed(() => store.user?.user);
     const publicProfile = computed(() => store.publicProfile);
-    const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
-    const avatarUrl = computed(() => (store.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || defaultAvatar);
+    const avatarUrl = computed(() => (store.isAuthenticated ? profile.value?.pic : publicProfile.value?.pic) || "");
     const displayName = computed(() => store.isAuthenticated
       ? (profile.value?.truename || profile.value?.userName || "飞龙Test")
       : (publicProfile.value?.trueName || "飞龙Test"));
     const displayMeta = computed(() => store.isAuthenticated
       ? (profile.value?.bio || "Golang Dev")
       : (publicProfile.value?.bio || "Golang Dev"));
-    const useDefaultAvatar = (event: Event) => {
-      const image = event.currentTarget as HTMLImageElement;
-      if (image.src.endsWith(defaultAvatar)) return;
-      image.src = defaultAvatar;
-    };
 
     const hideMenu = () => {
       const menuElement = document.getElementById("kt_user_menu");
@@ -148,7 +145,6 @@ export default defineComponent({
       avatarUrl,
       displayName,
       displayMeta,
-      useDefaultAvatar,
     };
   },
 });
