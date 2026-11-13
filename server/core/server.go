@@ -12,6 +12,7 @@ import (
 
 	"feilongBlog/global"
 	"feilongBlog/initialize"
+	"feilongBlog/service/blog"
 	"go.uber.org/zap"
 )
 
@@ -38,6 +39,7 @@ func RunServer() {
 	go func() { errCh <- s.ListenAndServe() }()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	go blog.RunScheduledPublisher(ctx)
 	select {
 	case err := <-errCh:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {

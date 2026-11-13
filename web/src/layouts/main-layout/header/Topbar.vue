@@ -8,6 +8,15 @@
       </div>
       <!--end::Search-->
 
+      <div class="d-flex align-items-center ms-3">
+        <router-link
+          to="/reading-list"
+          class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline w-40px h-40px"
+          aria-label="稍后阅读清单"
+          title="稍后阅读"
+          ><i class="bi bi-bookmark fs-4"></i
+        ></router-link>
+      </div>
       <!--begin::Theme mode-->
       <div class="d-flex align-items-center ms-3 ms-lg-4">
         <!--begin::Menu toggle-->

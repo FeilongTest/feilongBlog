@@ -79,6 +79,12 @@ const routes: Array<RouteRecordRaw> = [
         },
       },
       {
+        path: "/admin/tags",
+        name: "admin-tags",
+        component: () => import("@/views/admin/tags/index.vue"),
+        meta: { pageTitle: "标签管理" },
+      },
+      {
         path: "/admin/account/settings",
         name: "admin-account-settings",
         component: () => import("@/views/admin/account/Settings.vue"),
@@ -96,7 +102,6 @@ const routes: Array<RouteRecordRaw> = [
           breadcrumbs: ["setting", "seo"],
         },
       },
-
     ],
   },
   {
@@ -106,8 +111,7 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: "",
         name: "blog-home",
-        component: () =>
-          import("@/views/blog/Feeds.vue"),
+        component: () => import("@/views/blog/Feeds.vue"),
         meta: {
           pageTitle: "首页",
           breadcrumbs: ["Pages", "Index"],
@@ -116,8 +120,7 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: "content/:fid/:id",
         name: "blog-content",
-        component: () =>
-          import("@/views/blog/Post.vue"),
+        component: () => import("@/views/blog/Post.vue"),
         meta: {
           pageTitle: "文章详情",
           breadcrumbs: ["Pages", "Article"],
@@ -131,6 +134,24 @@ const routes: Array<RouteRecordRaw> = [
           pageTitle: "分类",
           breadcrumbs: ["Pages", "Article"],
         },
+      },
+      {
+        path: "reading-list",
+        name: "reading-list",
+        component: () => import("@/views/blog/ReadingList.vue"),
+        meta: { pageTitle: "稍后阅读" },
+      },
+      {
+        path: "tags",
+        name: "blog-tags",
+        component: () => import("@/views/blog/Tags.vue"),
+        meta: { pageTitle: "标签专题" },
+      },
+      {
+        path: "tag/:id",
+        name: "tag",
+        component: () => import("@/views/blog/Feeds.vue"),
+        meta: { pageTitle: "标签专题" },
       },
       {
         path: "about",
@@ -212,16 +233,19 @@ router.beforeEach((to) => {
   const configStore = useConfigStore();
 
   // 更新认证状态（基于token是否存在）
-	const authenticated = JwtService.isTokenValid();
-	authStore.isAuthenticated = authenticated;
-	if (!authenticated) JwtService.destroyToken();
+  const authenticated = JwtService.isTokenValid();
+  authStore.isAuthenticated = authenticated;
+  if (!authenticated) JwtService.destroyToken();
 
   // 根路径"/"就是博客首页，管理员通过菜单进入后台
 
   // current page view title
   const siteStore = useSiteStore();
-  const appName = siteStore.setting.siteName || import.meta.env.VITE_APP_NAME || "飞龙博客";
-	document.title = to.meta.pageTitle ? `${to.meta.pageTitle} - ${appName}` : appName;
+  const appName =
+    siteStore.setting.siteName || import.meta.env.VITE_APP_NAME || "飞龙博客";
+  document.title = to.meta.pageTitle
+    ? `${to.meta.pageTitle} - ${appName}`
+    : appName;
 
   // reset config to initial state
   configStore.resetLayoutConfig();
@@ -229,9 +253,9 @@ router.beforeEach((to) => {
   // before page access check if page requires authentication
   if (to.meta.middleware == "auth") {
     // verify auth token before each page change
-	if (!authStore.isAuthenticated) {
-	  return { name: "sign-in", query: { redirect: to.fullPath } };
-	}
+    if (!authStore.isAuthenticated) {
+      return { name: "sign-in", query: { redirect: to.fullPath } };
+    }
   }
 
   // Scroll page to top on every route change
@@ -240,7 +264,7 @@ router.beforeEach((to) => {
     left: 0,
     behavior: "smooth",
   });
-	return true;
+  return true;
 });
 
 export default router;

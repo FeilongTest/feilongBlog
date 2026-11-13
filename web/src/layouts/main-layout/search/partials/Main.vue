@@ -1,11 +1,14 @@
 <template>
   <div class="mb-4">
     <!--begin::Heading-->
-    <div class="d-flex flex-stack fw-semobold mb-4" v-if="searchHistory.length > 0">
+    <div
+      class="d-flex flex-stack fw-semobold mb-4"
+      v-if="searchHistory.length > 0"
+    >
       <!--begin::Label-->
       <span class="text-muted fs-6 me-2">最近搜索:</span>
       <!--end::Label-->
-      <button 
+      <button
         @click="clearHistory"
         class="btn btn-sm btn-link text-muted p-0"
         type="button"
@@ -17,11 +20,14 @@
     <!--begin::Items-->
     <div class="scroll-y mh-200px mh-lg-325px" v-if="searchHistory.length > 0">
       <!--begin::Item-->
-      <div 
-        v-for="(item, index) in searchHistory" 
+      <div
+        v-for="(item, index) in searchHistory"
         :key="index"
         class="d-flex align-items-center mb-5 cursor-pointer"
         @click="handleHistoryClick(item)"
+        role="button"
+        tabindex="0"
+        @keydown.enter="handleHistoryClick(item)"
       >
         <!--begin::Symbol-->
         <div class="symbol symbol-40px symbol-circle me-4">
@@ -37,7 +43,7 @@
         </div>
         <!--end::Title-->
         <!--begin::Delete-->
-        <button 
+        <button
           @click.stop="removeHistoryItem(index)"
           class="btn btn-sm btn-icon btn-light-danger"
           type="button"
@@ -49,12 +55,12 @@
       <!--end::Item-->
     </div>
     <!--end::Items-->
-    
+
     <!--begin::Empty-->
     <div v-else class="text-center py-10">
       <i class="bi bi-search fs-3x text-muted mb-3"></i>
       <p class="text-muted fs-6 mb-0">暂无搜索历史</p>
-      <p class="text-muted fs-7 mt-2">开始搜索文章标题吧</p>
+      <p class="text-muted fs-7 mt-2">按 Ctrl / ⌘ + K，搜索标题、摘要或正文</p>
     </div>
     <!--end::Empty-->
   </div>
@@ -63,6 +69,7 @@
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
 import { defineComponent, ref, onMounted, onUnmounted } from "vue";
+import { MenuComponent } from "@/assets/ts/components/MenuComponent";
 import { useRouter } from "vue-router";
 
 export default defineComponent({
@@ -75,8 +82,12 @@ export default defineComponent({
     // 加载搜索历史
     const loadSearchHistory = () => {
       try {
-        const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
-        searchHistory.value = history;
+        const history = JSON.parse(
+          localStorage.getItem("searchHistory") || "[]"
+        );
+        searchHistory.value = Array.isArray(history)
+          ? history.filter((item) => typeof item === "string").slice(0, 10)
+          : [];
       } catch (error) {
         console.error("加载搜索历史失败:", error);
         searchHistory.value = [];
@@ -87,42 +98,47 @@ export default defineComponent({
     const handleHistoryClick = (keyword: string) => {
       router.push({
         name: "blog-home",
-        query: { keyword: keyword },
+        query: { keyword: keyword, scope: "all" },
       });
       // 关闭搜索菜单
-      const menuElement = document.getElementById("kt-search-menu");
-      if (menuElement) {
-        const menuInstance = (window as any).KTMenu?.getInstance(menuElement);
-        if (menuInstance) {
-          menuInstance.hide();
-        }
-      }
+      MenuComponent.hideDropdowns(undefined);
     };
 
     // 删除单条历史记录
     const removeHistoryItem = (index: number) => {
       searchHistory.value.splice(index, 1);
-      localStorage.setItem("searchHistory", JSON.stringify(searchHistory.value));
+      try {
+        localStorage.setItem(
+          "searchHistory",
+          JSON.stringify(searchHistory.value)
+        );
+      } catch {
+        loadSearchHistory();
+      }
     };
 
     // 清除所有历史记录
     const clearHistory = () => {
       searchHistory.value = [];
-      localStorage.removeItem("searchHistory");
+      try {
+        localStorage.removeItem("searchHistory");
+      } catch {
+        loadSearchHistory();
+      }
     };
 
     onMounted(() => {
       loadSearchHistory();
       // 监听存储事件，当搜索历史更新时自动刷新
-      window.addEventListener('storage', loadSearchHistory);
+      window.addEventListener("storage", loadSearchHistory);
       // 监听自定义事件（同页面内更新）
-      window.addEventListener('searchHistoryUpdated', loadSearchHistory);
+      window.addEventListener("searchHistoryUpdated", loadSearchHistory);
     });
 
     // 组件卸载时移除事件监听
     onUnmounted(() => {
-      window.removeEventListener('storage', loadSearchHistory);
-      window.removeEventListener('searchHistoryUpdated', loadSearchHistory);
+      window.removeEventListener("storage", loadSearchHistory);
+      window.removeEventListener("searchHistoryUpdated", loadSearchHistory);
     });
 
     return {

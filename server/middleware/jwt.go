@@ -61,6 +61,7 @@ func JWTAuth() gin.HandlerFunc {
 			c.Header("new-expires-at", strconv.FormatInt(newClaims.ExpiresAt, 10))
 		}
 		c.Set("claims", claims)
+		c.Header("Cache-Control", "no-store")
 		c.Next()
 	}
 }
@@ -74,6 +75,7 @@ func AdminOnly() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, response.Response{Code: response.ERROR, Msg: "仅管理员可以访问"})
 			return
 		}
+		c.Header("Cache-Control", "no-store")
 		c.Next()
 	}
 }

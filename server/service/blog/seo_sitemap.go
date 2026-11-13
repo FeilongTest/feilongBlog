@@ -64,6 +64,7 @@ func (s *SeoService) buildSitemap() string {
 		{Loc: siteURL + "/", ChangeFreq: "daily", Priority: "1.0"},
 		{Loc: siteURL + "/archive", ChangeFreq: "daily", Priority: "0.7"},
 		{Loc: siteURL + "/about", ChangeFreq: "monthly", Priority: "0.4"},
+		{Loc: siteURL + "/tags", ChangeFreq: "weekly", Priority: "0.5"},
 	}
 
 	var categories []model.Category
@@ -77,6 +78,11 @@ func (s *SeoService) buildSitemap() string {
 		}
 	}
 
+	if tags, err := (&TagService{}).List(true); err == nil {
+		for _, tag := range tags {
+			items = append(items, sitemapItem{Loc: fmt.Sprintf("%s/tag/%d", siteURL, tag.ID), ChangeFreq: "weekly", Priority: "0.5"})
+		}
+	}
 	var articles []model.Article
 	if err := global.BLOG_DB.Where("status = ?", 0).Order("ctime desc").Find(&articles).Error; err == nil {
 		for _, article := range articles {
@@ -178,7 +184,7 @@ func (s *SeoService) CanonicalRedirect(path string) string {
 }
 
 func writeRobotExclusions(b *strings.Builder) {
-	for _, path := range []string{"/admin", "/dashboard", "/sign-in", "/blog/", "/article/", "/*?keyword=", "/*&keyword=", "/*?page=", "/*&page="} {
+	for _, path := range []string{"/admin", "/reading-list", "/dashboard", "/sign-in", "/blog/", "/article/", "/*?keyword=", "/*&keyword=", "/*?page=", "/*&page="} {
 		b.WriteString("Disallow: " + path + "\n")
 	}
 }

@@ -17,6 +17,7 @@
             type="button"
             class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline w-40px h-40px"
             aria-label="搜索文章"
+            @click="focusSearch"
             title="搜索文章"
           >
             <span class="svg-icon svg-icon-1">
@@ -40,7 +41,11 @@
         <!--begin::Wrapper-->
         <div>
           <!--begin::Form-->
-          <form class="w-100 position-relative mb-3" autocomplete="off">
+          <form
+            class="w-100 position-relative mb-3"
+            autocomplete="off"
+            @submit.prevent="handleSearch"
+          >
             <!--begin::Icon-->
             <span
               class="svg-icon svg-icon-2 svg-icon-lg-1 svg-icon-gray-500 position-absolute top-50 translate-middle-y ms-0"
@@ -56,11 +61,11 @@
               ref="inputRef"
               v-model="search"
               @input="searching"
-              @keyup.enter="handleSearch"
               type="text"
               class="form-control form-control-flush ps-10"
               name="search"
-              placeholder="搜索文章标题..."
+              placeholder="搜索标题、摘要或正文…"
+              maxlength="80"
             />
             <!--end::Input-->
 
@@ -88,23 +93,26 @@
               </span>
             </span>
             <!--end::Reset-->
-
           </form>
           <!--end::Form-->
 
           <!--begin::Separator-->
-          <div class="separator border-gray-200 mb-6" v-if="state !== 'main'"></div>
+          <div
+            class="separator border-gray-200 mb-6"
+            v-if="state !== 'main'"
+          ></div>
           <!--end::Separator-->
-          
+
           <!--begin::Search Results-->
           <div v-if="state === 'results'" class="mb-4">
             <div class="d-flex flex-column align-items-center py-10">
               <div class="text-center mb-5">
                 <i class="bi bi-search fs-2x text-primary mb-3"></i>
                 <p class="text-gray-600 fs-6 mb-4">
-                  搜索 "<strong>{{ search }}</strong>"
+                  搜索 "<strong>{{ search }}</strong
+                  >"
                 </p>
-                <button 
+                <button
                   @click="handleSearch"
                   class="btn btn-primary btn-sm"
                   type="button"
@@ -116,12 +124,11 @@
             </div>
           </div>
           <!--end::Search Results-->
-          
+
           <PartialMain v-else-if="state === 'main'"></PartialMain>
           <Empty v-else-if="state === 'empty'"></Empty>
         </div>
         <!--end::Wrapper-->
-
       </div>
       <!--end::Menu-->
     </template>
@@ -130,10 +137,11 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import PartialMain from "@/layouts/main-layout/search/partials/Main.vue";
 import Empty from "@/layouts/main-layout/search/partials/Empty.vue";
+import { MenuComponent as MenuController } from "@/assets/ts/components/MenuComponent";
 import MenuComponent from "@/components/menu/MenuComponent.vue";
 
 export default defineComponent({
@@ -152,11 +160,28 @@ export default defineComponent({
     const loading = ref<boolean>(false);
     const inputRef = ref<HTMLInputElement | null>(null);
 
+    const focusSearch = () =>
+      window.setTimeout(() => inputRef.value?.focus(), 0);
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k" &&
+        !event.repeat
+      ) {
+        event.preventDefault();
+        document
+          .querySelector<HTMLButtonElement>("#kt_header_search_toggle button")
+          ?.click();
+      }
+    };
+    onMounted(() => window.addEventListener("keydown", shortcut));
+    onBeforeUnmount(() => window.removeEventListener("keydown", shortcut));
+
     const searching = (e: Event) => {
       const target = e.target as HTMLInputElement;
       const keyword = target.value.trim();
-      
-      if (keyword.length <= 1) {
+
+      if (keyword.length === 0) {
         state.value = "main";
         loading.value = false;
       } else {
@@ -184,23 +209,18 @@ export default defineComponent({
       if (keyword.length > 0) {
         // 保存搜索历史到 localStorage
         saveSearchHistory(keyword);
-        
+
         // 触发自定义事件，通知 Main.vue 刷新
-        window.dispatchEvent(new Event('searchHistoryUpdated'));
-        
+        window.dispatchEvent(new Event("searchHistoryUpdated"));
+
         // 跳转到搜索结果页面
         router.push({
           name: "blog-home",
-          query: { keyword: keyword },
+          query: { keyword: keyword, scope: "all" },
         });
         // 关闭搜索菜单（通过触发菜单关闭事件）
-        const menuElement = document.getElementById("kt-search-menu");
-        if (menuElement) {
-          const menuInstance = (window as any).KTMenu?.getInstance(menuElement);
-          if (menuInstance) {
-            menuInstance.hide();
-          }
-        }
+        MenuController.hideDropdowns(undefined);
+        inputRef.value?.blur();
         // 重置搜索框
         search.value = "";
         state.value = "main";
@@ -209,7 +229,12 @@ export default defineComponent({
 
     const saveSearchHistory = (keyword: string) => {
       try {
-        const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+        const parsed = JSON.parse(
+          localStorage.getItem("searchHistory") || "[]"
+        );
+        const history = Array.isArray(parsed)
+          ? parsed.filter((item) => typeof item === "string").slice(0, 10)
+          : [];
         // 移除重复项
         const filtered = history.filter((item: string) => item !== keyword);
         // 添加到开头
@@ -235,6 +260,7 @@ export default defineComponent({
 
     return {
       search,
+      focusSearch,
       state,
       loading,
       searching,

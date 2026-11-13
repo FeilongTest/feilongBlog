@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +40,12 @@ func (a *FileApi) UploadFile(c *gin.Context) {
 		response.FailWithMessage("仅支持常见位图格式，禁止 SVG", c)
 		return
 	}
+	extension := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp", "image/bmp": ".bmp", "image/x-ms-bmp": ".bmp", "image/x-icon": ".ico", "image/vnd.microsoft.icon": ".ico"}[contentType]
+	if extension == "" {
+		response.FailWithMessage("不支持该图片格式，请使用 JPG、PNG、GIF、WebP 或 BMP", c)
+		return
+	}
+	header.Filename = strings.TrimSuffix(header.Filename, filepath.Ext(header.Filename)) + extension
 	header.Header.Set("Content-Type", contentType)
 	filePath, fileName, err := fileUploadService.UploadFile(header) // 文件上传后拿到文件路径
 	if err != nil {

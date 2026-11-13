@@ -46,8 +46,8 @@ cors:
   mode: whitelist
   whitelist:
     - allow-origin: http://localhost:5173
-      allow-methods: POST, GET, OPTIONS, PUT, DELETE
-      allow-headers: Content-Type, AccessToken, X-CSRF-Token, Authorization, Token
+      allow-methods: POST, GET, OPTIONS, PUT, PATCH, DELETE
+      allow-headers: Content-Type, X-Token, AccessToken, X-CSRF-Token, Authorization, Token
       expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type
       allow-credentials: true
 

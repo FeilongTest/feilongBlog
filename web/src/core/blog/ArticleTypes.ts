@@ -1,45 +1,48 @@
+import type { Tag } from "./PublishingTypes";
 interface ArticleList {
-    ID:number;
-    content:string;
-    summary?:string;
-    contentFormat:"html" | "markdown";
-    fid:number;
-    pic:string;
-    title:string;
-    uid:number;
-    view:number;
-    type:number;
-    ctime:number;
-    editTime:number;
-    file:string;
-    isTop:number;
-    status:number;
-    commentCount:number;
-    likeCount:number;
+  ID: number;
+  content: string;
+  summary?: string;
+  excerpt?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  publishAt?: number;
+  version?: number;
+  tags?: Tag[];
+  tagNames?: string[];
+  contentFormat: "html" | "markdown";
+  fid: number;
+  pic: string;
+  title: string;
+  uid: number;
+  view: number;
+  type: number;
+  ctime: number;
+  editTime: number;
+  file: string;
+  isTop: number;
+  status: number;
+  commentCount: number;
+  likeCount: number;
 }
 interface ArticelSummary {
-    fid:number;
-    total:number;
-    name:string;
+  fid: number;
+  total: number;
+  name: string;
 }
 
 interface ArticleBrief {
-    ID:number;
-    fid:number;
-    title:string;
-    pic:string;
-    view:number;
-    ctime:number;
+  ID: number;
+  fid: number;
+  title: string;
+  pic: string;
+  view: number;
+  ctime: number;
 }
 
 interface PostAside {
-    related:ArticleBrief[];
-    hot:ArticleBrief[];
+  related: ArticleBrief[];
+  hot: ArticleBrief[];
 }
 
-export type {
-    ArticleList,
-    ArticelSummary,
-    ArticleBrief,
-    PostAside,
-}
+export type { ArticleList, ArticelSummary, ArticleBrief, PostAside };

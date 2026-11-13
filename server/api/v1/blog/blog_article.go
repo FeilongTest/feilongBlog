@@ -9,6 +9,7 @@ import (
 	"feilongBlog/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"net/http"
 	"strings"
 )
 
@@ -78,7 +79,7 @@ func (a *ArticleApi) GetArticleList(c *gin.Context) {
 	}
 	pageInfo.Normalize()
 	if list, total, err := articleApi.GetArticleList(pageInfo); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		articleFailure(c, err)
 	} else {
 		response.OkWithDetailed(response.PageResult{
 			List:     list,
@@ -126,7 +127,7 @@ func (a *ArticleApi) GetArticle(c *gin.Context) {
 		return
 	}
 	if article, err := articleApi.GetArticle(req.ID); err != nil {
-		response.FailWithMessage(err.Error(), c)
+		articleFailure(c, err)
 	} else {
 		response.OkWithDetailed(article, "获取成功", c)
 	}
@@ -154,29 +155,34 @@ func (a *ArticleApi) GetArticleAdmin(c *gin.Context) {
 
 // CreateArticle 创建文章
 func (a *ArticleApi) CreateArticle(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 3<<20)
 	var article model.Article
 	err := c.ShouldBindJSON(&article)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	err = utils.Verify(article, utils.ArticleVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
+	if article.Status != model.ArticleDraft {
+		err = utils.Verify(article, utils.ArticleVerify)
+		if err != nil {
+			response.FailWithMessage(err.Error(), c)
+			return
+		}
 	}
 
+	article.Uid = int(utils.GetUserID(c))
 	err = articleApi.CreateArticle(&article)
 	if err != nil {
 		global.BLOG_LOG.Error("创建失败!", zap.Error(err))
-		response.FailWithMessage("创建失败", c)
+		articleFailure(c, err)
 		return
 	}
-	response.OkWithDetailed(gin.H{"id": article.ID}, "创建成功", c)
+	response.OkWithDetailed(gin.H{"id": article.ID, "version": article.Version, "status": article.Status}, "创建成功", c)
 }
 
 // UpdateArticleById 更新文章
 func (a *ArticleApi) UpdateArticleById(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 3<<20)
 	var article model.Article
 	err := c.ShouldBindJSON(&article)
 	if err != nil {
@@ -188,11 +194,11 @@ func (a *ArticleApi) UpdateArticleById(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err = articleApi.UpdateArticle(article); err != nil {
+	if err = articleApi.UpdateArticle(&article); err != nil {
 		global.BLOG_LOG.Error("更新失败!", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
+		articleFailure(c, err)
 	} else {
-		response.OkWithMessage("更新成功", c)
+		response.OkWithDetailed(gin.H{"id": article.ID, "version": article.Version, "status": article.Status}, "更新成功", c)
 	}
 }
 

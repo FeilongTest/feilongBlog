@@ -27,13 +27,20 @@ func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, error)
 	}
 
 	canonical := s.absoluteURL(fmt.Sprintf("/content/%d/%d", article.Fid, article.ID))
-	description := plainText(article.Content, article.ContentFormat, 150)
+	description := article.SeoDescription
+	if description == "" {
+		description = articleSummary(article)
+	}
 	if description == "" {
 		description = fmt.Sprintf("%s 发布的最新文章：%s", setting.SiteName, article.Title)
 	}
 
+	title := article.SeoTitle
+	if title == "" {
+		title = fmt.Sprintf("%s - %s", article.Title, setting.SiteName)
+	}
 	seo := &PageSeo{
-		Title:       fmt.Sprintf("%s - %s", article.Title, setting.SiteName),
+		Title:       title,
 		Description: description,
 		Keywords:    joinNonEmpty(",", article.Title, categoryName, setting.SiteName),
 		Canonical:   canonical,

@@ -17,10 +17,13 @@ func (s *ApiRouter) InitBaseRouter(Router *gin.RouterGroup) {
 	var friendlinkApi = v1.ApiGroupApp.FriendlinkApiGroup
 	var statisticApi = v1.ApiGroupApp.StatisticApiGroup
 	{
-		apiRouterWithoutRecord.POST("login", userRouterApi.Login)                        // 登录
-		apiRouterWithoutRecord.GET("getContact", userRouterApi.GetPublicContact)         // 获取公开联系信息
-		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList)       // 获取分类
-		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)          //获取文章列表
+		apiRouterWithoutRecord.POST("login", userRouterApi.Login)                  // 登录
+		apiRouterWithoutRecord.GET("getContact", userRouterApi.GetPublicContact)   // 获取公开联系信息
+		apiRouterWithoutRecord.GET("getCategoryList", categoryApi.GetCategoryList) // 获取分类
+		apiRouterWithoutRecord.GET("getArticleList", articleApi.GetArticleList)    //获取文章列表
+		apiRouterWithoutRecord.POST("getReadingArticles", articleApi.ReadingArticles)
+		apiRouterWithoutRecord.GET("getTags", articleApi.PublicTags)
+		apiRouterWithoutRecord.GET("getTag", articleApi.PublicTag)
 		apiRouterWithoutRecord.GET("getArchive", articleApi.GetArchive)                  //获取文章归档
 		apiRouterWithoutRecord.POST("getArticle", articleApi.GetArticle)                 //获取文章信息
 		apiRouterWithoutRecord.POST("getSummary", articleApi.GetArticleSummary)          //获取分类概述
@@ -54,6 +57,12 @@ func (s *ApiRouter) InitArticleRouter(Router *gin.RouterGroup) {
 		apiRouterWithoutRecord.DELETE("delArticle", apiRouterApi.DelArticleById)
 		apiRouterWithoutRecord.DELETE("delArticleByIds", apiRouterApi.DelArticleByIds)
 		apiRouterWithoutRecord.PUT("updateArticle", apiRouterApi.UpdateArticleById)
+		apiRouterWithoutRecord.PATCH("state", apiRouterApi.PatchState)
+		apiRouterWithoutRecord.GET("revisions", apiRouterApi.Revisions)
+		apiRouterWithoutRecord.GET("revision", apiRouterApi.Revision)
+		apiRouterWithoutRecord.GET("tags", apiRouterApi.AdminTags)
+		apiRouterWithoutRecord.POST("tags", apiRouterApi.SaveTag)
+		apiRouterWithoutRecord.DELETE("tags", apiRouterApi.DeleteTag)
 	}
 }
 

@@ -36,6 +36,25 @@ func (s *SeoService) buildPageSeo(path, rawQuery string) (*PageSeo, int, error) 
 		return s.aboutSeo(setting), 200, nil
 	case strings.EqualFold(cleanPath, "/archive"):
 		return s.archiveSeo(setting), 200, nil
+	case cleanPath == "/reading-list":
+		seo := &PageSeo{Title: "稍后阅读 - " + setting.SiteName, Description: "保存在本浏览器的稍后阅读清单。", Canonical: s.absoluteURL("/reading-list"), Robots: "noindex, nofollow", OgType: "website"}
+		return seo, 200, nil
+	case cleanPath == "/tags":
+		seo, err := s.tagsSeo(setting)
+		if err != nil {
+			return nil, 500, err
+		}
+		return seo, 200, nil
+	case strings.HasPrefix(cleanPath, "/tag/") && len(strings.Split(strings.Trim(cleanPath, "/"), "/")) == 2:
+		if id := pathSegmentID(cleanPath, 2); id > 0 {
+			seo, err := s.tagSeo(setting, uint(id), rawQuery)
+			if err == nil {
+				return seo, 200, nil
+			}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, 500, err
+			}
+		}
 	case strings.HasPrefix(cleanPath, "/category/") && len(strings.Split(strings.Trim(cleanPath, "/"), "/")) == 2:
 		// 路径形如 /category/:id，分类 ID 位于第 2 段
 		if id := pathSegmentID(cleanPath, 2); id > 0 {
@@ -111,7 +130,7 @@ func (s *SeoService) homeSeo(setting model.Setting) *PageSeo {
 func (s *SeoService) renderCrawlNav() string {
 	var b strings.Builder
 	b.WriteString(`<nav class="seo-prerender">`)
-	b.WriteString(`<a href="/about">关于</a>`)
+	b.WriteString(`<a href="/about">关于</a> · <a href="/tags">标签专题</a>`)
 	b.WriteString(` · <a href="/archive">文章归档</a>`)
 	b.WriteString(` · <a href="/rss.xml">RSS</a>`)
 	var categories []model.Category
@@ -380,7 +399,7 @@ func (s *SeoService) renderListBody(title, description string, list []model.Arti
 		if article.Ctime > 0 {
 			b.WriteString(fmt.Sprintf("<time datetime=\"%s\">%s</time>", isoTime(article.Ctime), escapeHTML(localDate(article.Ctime))))
 		}
-		if summary := plainText(article.Content, article.ContentFormat, 120); summary != "" {
+		if summary := articleSummary(article); summary != "" {
 			b.WriteString(fmt.Sprintf("<p>%s</p>", escapeHTML(summary)))
 		}
 		b.WriteString("</li>")
@@ -445,9 +464,7 @@ func (s *SeoService) applyListingQuery(seo *PageSeo, setting model.Setting, fid 
 	if fid > 0 {
 		db = db.Where("fid = ?", fid)
 	}
-	if keyword != "" {
-		db = db.Where("title LIKE ?", "%"+keyword+"%")
-	}
+	db = applyArticleFilters(db, model.ArticleSearch{Keyword: keyword, Scope: query.Get("scope")})
 	if err := db.Order("istop desc, ctime desc").Offset((page - 1) * seoListLimit).Limit(seoListLimit).Find(&articles).Error; err != nil {
 		return err
 	}
@@ -458,6 +475,9 @@ func (s *SeoService) applyListingQuery(seo *PageSeo, setting model.Setting, fid 
 	params := url.Values{}
 	if keyword != "" {
 		params.Set("keyword", keyword)
+		if query.Get("scope") == "all" {
+			params.Set("scope", "all")
+		}
 		seo.Title = fmt.Sprintf("“%s”的搜索结果 - %s", keyword, setting.SiteName)
 		seo.Description = fmt.Sprintf("在 %s 中搜索“%s”的相关文章。", setting.SiteName, keyword)
 	}
@@ -475,4 +495,64 @@ func (s *SeoService) applyListingQuery(seo *PageSeo, setting model.Setting, fid 
 	}
 	seo.Body = s.renderCrawlNav() + s.renderListBody(seo.Title, seo.Description, articles)
 	return nil
+}
+
+func (s *SeoService) tagsSeo(setting model.Setting) (*PageSeo, error) {
+	tags, err := (&TagService{}).List(true)
+	if err != nil {
+		return nil, err
+	}
+	seo := &PageSeo{Title: "标签专题 - " + setting.SiteName, Description: "按主题发现文章与相关内容。", Canonical: s.absoluteURL("/tags"), Robots: "index, follow", OgType: "website"}
+	var body strings.Builder
+	body.WriteString(`<nav class="seo-prerender"><h1>标签专题</h1><ul>`)
+	for _, tag := range tags {
+		body.WriteString(fmt.Sprintf(`<li><a href="/tag/%d">%s</a>（%d）</li>`, tag.ID, escapeHTML(tag.Name), tag.Count))
+	}
+	body.WriteString(`</ul></nav>`)
+	seo.Body = body.String()
+	return seo, nil
+}
+
+func (s *SeoService) tagSeo(setting model.Setting, id uint, rawQuery string) (*PageSeo, error) {
+	tag, err := (&TagService{}).GetPublic(id)
+	if err != nil {
+		return nil, err
+	}
+	seo := &PageSeo{Title: tag.Name + " 专题 - " + setting.SiteName, Description: tag.Description, Canonical: s.absoluteURL(fmt.Sprintf("/tag/%d", id)), Robots: "index, follow", OgType: "website"}
+	if seo.Description == "" {
+		seo.Description = fmt.Sprintf("关于 %s 的 %d 篇文章。", tag.Name, tag.Count)
+	}
+	query, _ := url.ParseQuery(rawQuery)
+	page, _ := strconv.Atoi(query.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	if page > 1000000 {
+		page = 1000000
+	}
+	info := model.ArticleSearch{TagID: id, Keyword: query.Get("keyword"), Scope: query.Get("scope")}
+	db := applyArticleFilters(global.BLOG_DB.Where("status = ?", 0), info)
+	var articles []model.Article
+	if err := db.Order("istop desc, ctime desc").Limit(seoListLimit).Offset((page - 1) * seoListLimit).Find(&articles).Error; err != nil {
+		return nil, err
+	}
+	params := url.Values{}
+	if info.Keyword != "" {
+		params.Set("keyword", info.Keyword)
+		if info.Scope == "all" {
+			params.Set("scope", "all")
+		}
+		seo.Robots = "noindex, follow"
+	}
+	if page > 1 {
+		params.Set("page", strconv.Itoa(page))
+		seo.Robots = "noindex, follow"
+		seo.Title += fmt.Sprintf(" - 第 %d 页", page)
+	}
+	if len(params) > 0 {
+		seo.Canonical += "?" + params.Encode()
+	}
+	seo.Body = s.renderCrawlNav() + s.renderListBody(tag.Name, seo.Description, articles)
+	seo.JsonLd = append(seo.JsonLd, s.collectionJsonLd(seo.Title, seo.Description, seo.Canonical))
+	return seo, nil
 }

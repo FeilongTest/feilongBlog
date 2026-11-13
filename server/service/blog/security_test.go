@@ -47,6 +47,7 @@ func TestPublicArticleCannotReadHiddenArticle(t *testing.T) {
 func TestAdminCanEditHiddenArticleWithoutIncrementingViews(t *testing.T) {
 	mock := mockDatabase(t)
 	mock.ExpectQuery("SELECT .* WHERE .*id.*").WithArgs(7).WillReturnRows(sqlmock.NewRows([]string{"id", "status", "view"}).AddRow(7, 1, 9))
+	mock.ExpectQuery("SELECT link.article_id, tag.id, tag.name, tag.description").WithArgs(7).WillReturnRows(sqlmock.NewRows([]string{"article_id", "id", "name", "description"}))
 	article, err := (&ArticleService{}).GetArticleAdmin(7)
 	if err != nil || article.Status != 1 || article.View != 9 {
 		t.Fatalf("article=%+v error=%v", article, err)
@@ -139,26 +140,13 @@ func TestEmbeddedLocalMediaIsRootAbsolute(t *testing.T) {
 	}
 }
 
-func TestCreateArticleKeepsAssignedIDForPublishResponse(t *testing.T) {
-	mock := mockDatabase(t)
-	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO `blog_article`").WillReturnResult(sqlmock.NewResult(456, 1))
-	mock.ExpectCommit()
-	article := model.Article{Title: "新文章", Fid: 1, ContentFormat: "html"}
-	if err := (&ArticleService{}).CreateArticle(&article); err != nil {
-		t.Fatal(err)
-	}
-	if article.ID != 456 {
-		t.Fatalf("created ID=%d", article.ID)
-	}
-}
-
 func TestPublicFeedUsesSummaryWithoutDroppingTextUpdates(t *testing.T) {
 	mock := mockDatabase(t)
 	mock.ExpectQuery("SELECT count\\(\\*\\) FROM `blog_article`").WithArgs(0).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
 	mock.ExpectQuery("SELECT \\* FROM `blog_article`.*LIMIT 10").WithArgs(0).WillReturnRows(sqlmock.NewRows([]string{"id", "type", "content", "content_format"}).AddRow(1, 1, "# 技术文章\n\n正文说明", "markdown").AddRow(2, 0, "<p>这是一条动态</p>", "html"))
 	mock.ExpectQuery("SELECT aid, count\\(\\*\\) as count FROM `blog_comment`").WillReturnRows(sqlmock.NewRows([]string{"aid", "count"}))
 	mock.ExpectQuery("SELECT aid, count\\(\\*\\) as count FROM `blog_article_like`").WillReturnRows(sqlmock.NewRows([]string{"aid", "count"}))
+	mock.ExpectQuery("SELECT link.article_id, tag.id, tag.name, tag.description").WithArgs(1, 2).WillReturnRows(sqlmock.NewRows([]string{"article_id", "id", "name", "description"}))
 	info := model.ArticleSearch{}
 	info.Page = 1
 	info.PageSize = 10

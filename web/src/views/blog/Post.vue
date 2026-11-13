@@ -1,16 +1,36 @@
 <template>
   <div class="reading-progress" aria-hidden="true">
-    <span class="reading-progress-bar" :style="{ transform: `scaleX(${readingProgress})` }"></span>
+    <span
+      class="reading-progress-bar"
+      :style="{ transform: `scaleX(${readingProgress})` }"
+    ></span>
   </div>
 
   <PostSkeleton v-if="loading" />
   <div v-else-if="loadError" class="card py-15 text-center post-loaded">
     <div class="card-body">
       <i class="bi bi-cloud-slash fs-3x text-gray-300"></i>
-      <h3 class="mt-5">文章加载失败</h3>
-      <p class="text-muted">网络可能暂时不可用，请稍后重试。</p>
-      <button type="button" class="btn btn-sm btn-light-primary me-3" @click="retryArticle">重新加载</button>
-      <router-link :to="{ name: 'blog-home' }" class="btn btn-sm btn-light">返回首页</router-link>
+      <h3 class="mt-5">
+        {{ articleUnavailable ? "文章暂不可访问" : "文章加载失败" }}
+      </h3>
+      <p class="text-muted">
+        {{
+          articleUnavailable
+            ? "文章可能已下线、删除，或地址不完整。"
+            : "网络可能暂时不可用，请稍后重试。"
+        }}
+      </p>
+      <button
+        v-if="!articleUnavailable"
+        type="button"
+        class="btn btn-sm btn-light-primary me-3"
+        @click="retryArticle"
+      >
+        重新加载
+      </button>
+      <router-link :to="{ name: 'blog-home' }" class="btn btn-sm btn-light"
+        >返回首页</router-link
+      >
     </div>
   </div>
   <div v-else class="card post-loaded">
@@ -22,30 +42,75 @@
               <div class="d-flex flex-wrap mb-6">
                 <div class="me-9 my-1">
                   <span class="svg-icon svg-icon-primary me-1 fs-2">
-                    <inline-svg :src="getAssetPath('/media/icons/duotune/general/gen016.svg')" />
+                    <inline-svg
+                      :src="
+                        getAssetPath('/media/icons/duotune/general/gen016.svg')
+                      "
+                    />
                   </span>
-                  <span class="fw-bold text-gray-400">{{ formatDateTime(articleInfo.ctime) }}</span>
+                  <span class="fw-bold text-gray-400">{{
+                    formatDateTime(articleInfo.ctime)
+                  }}</span>
                 </div>
                 <div class="me-9 my-1">
                   <span class="svg-icon svg-icon-primary me-1 fs-2">
-                    <inline-svg :src="getAssetPath('/media/icons/duotune/art/art005.svg')" />
+                    <inline-svg
+                      :src="getAssetPath('/media/icons/duotune/art/art005.svg')"
+                    />
                   </span>
-                  <span class="fw-bold text-gray-400">{{ formatDateTime(articleInfo.editTime) }}</span>
+                  <span class="fw-bold text-gray-400">{{
+                    formatDateTime(articleInfo.editTime)
+                  }}</span>
                 </div>
                 <div class="me-9 my-1">
                   <span class="svg-icon svg-icon-primary me-1 fs-2">
-                    <inline-svg :src="getAssetPath('/media/icons/duotune/coding/cod006.svg')" />
+                    <inline-svg
+                      :src="
+                        getAssetPath('/media/icons/duotune/coding/cod006.svg')
+                      "
+                    />
                   </span>
-                  <span class="fw-bold text-gray-400">{{ articleInfo.view || 0 }}</span>
+                  <span class="fw-bold text-gray-400">{{
+                    articleInfo.view || 0
+                  }}</span>
                 </div>
               </div>
 
               <h1 class="text-dark fs-2 fw-bold">{{ articleInfo.title }}</h1>
               <div class="d-flex flex-wrap align-items-center gap-3 mt-4 mb-5">
-                <span class="text-muted fs-7" data-testid="reading-stats">{{ stats.count }} 字词 · 约 {{ stats.minutes }} 分钟阅读</span>
-                <button type="button" class="btn btn-sm btn-light-primary" @click="copyArticleLink">复制文章链接</button>
-                <button v-if="canShare" type="button" class="btn btn-sm btn-light" @click="shareArticle">分享文章</button>
-                <span class="text-muted fs-7" role="status" aria-live="polite">{{ shareStatus }}</span>
+                <router-link
+                  v-for="tag in articleInfo.tags || []"
+                  :key="tag.id"
+                  :to="`/tag/${tag.id}`"
+                  class="badge badge-light-primary"
+                  >{{ tag.name }}</router-link
+                >
+                <span class="text-muted fs-7" data-testid="reading-stats"
+                  >{{ stats.count }} 字词 · 约
+                  {{ stats.minutes }} 分钟阅读</span
+                >
+                <SaveForLater v-if="articleInfo.ID" :article="articleInfo" />
+                <button
+                  type="button"
+                  class="btn btn-sm btn-light-primary"
+                  @click="copyArticleLink"
+                >
+                  复制文章链接
+                </button>
+                <button
+                  v-if="canShare"
+                  type="button"
+                  class="btn btn-sm btn-light"
+                  @click="shareArticle"
+                >
+                  分享文章
+                </button>
+                <span
+                  class="text-muted fs-7"
+                  role="status"
+                  aria-live="polite"
+                  >{{ shareStatus }}</span
+                >
               </div>
 
               <button
@@ -59,16 +124,29 @@
               </button>
             </div>
 
-            <div ref="contentRef" class="article-content mb-8" @click="onContentClick" v-html="sanitizedContent"></div>
+            <div
+              ref="contentRef"
+              class="article-content mb-8"
+              @click="onContentClick"
+              v-html="sanitizedContent"
+            ></div>
 
-            <div class="d-flex align-items-center border border-dashed card-rounded p-5 p-lg-10 mb-14">
+            <div
+              class="d-flex align-items-center border border-dashed card-rounded p-5 p-lg-10 mb-14"
+            >
               <div class="text-center flex-shrink-0 me-7 me-lg-13">
                 <div class="symbol symbol-70px symbol-circle mb-2">
                   <AuthorAvatar />
                 </div>
                 <div>
-                  <router-link to="/about" class="text-gray-700 text-hover-primary fw-bold">飞龙</router-link>
-                  <span class="text-gray-400 fs-7 fw-semibold d-block mt-1">feilong</span>
+                  <router-link
+                    to="/about"
+                    class="text-gray-700 text-hover-primary fw-bold"
+                    >飞龙</router-link
+                  >
+                  <span class="text-gray-400 fs-7 fw-semibold d-block mt-1"
+                    >feilong</span
+                  >
                 </div>
               </div>
               <div class="text-muted fw-semibold lh-lg">
@@ -78,7 +156,10 @@
           </div>
 
           <div class="mt-15">
-            <CommentSection v-if="articleInfo.ID" :article-id="articleInfo.ID" />
+            <CommentSection
+              v-if="articleInfo.ID"
+              :article-id="articleInfo.ID"
+            />
           </div>
         </div>
 
@@ -90,7 +171,10 @@
                 v-for="item in toc"
                 :key="item.id"
                 class="toc-link"
-                :class="{ 'toc-level-3': item.level === 3, 'toc-active': activeHeading === item.id }"
+                :class="{
+                  'toc-level-3': item.level === 3,
+                  'toc-active': activeHeading === item.id,
+                }"
                 :href="`#${item.id}`"
                 @click.prevent="scrollToHeading(item.id)"
               >
@@ -102,8 +186,12 @@
           <div class="mb-16">
             <h4 class="text-dark mb-7">搜索文章</h4>
             <div class="position-relative">
-              <span class="svg-icon svg-icon-2 svg-icon-gray-500 position-absolute top-50 translate-middle-y ms-3">
-                <inline-svg :src="getAssetPath('/media/icons/duotune/general/gen021.svg')" />
+              <span
+                class="svg-icon svg-icon-2 svg-icon-gray-500 position-absolute top-50 translate-middle-y ms-3"
+              >
+                <inline-svg
+                  :src="getAssetPath('/media/icons/duotune/general/gen021.svg')"
+                />
               </span>
               <input
                 v-model="searchKeyword"
@@ -125,36 +213,80 @@
 
           <div class="mb-16">
             <h4 class="text-dark mb-7">相关分类</h4>
-            <div v-if="summaryLoading" class="placeholder-glow" aria-label="正在加载相关分类">
-              <span v-for="item in 3" :key="item" class="placeholder col-12 d-block mb-5"></span>
+            <div
+              v-if="summaryLoading"
+              class="placeholder-glow"
+              aria-label="正在加载相关分类"
+            >
+              <span
+                v-for="item in 3"
+                :key="item"
+                class="placeholder col-12 d-block mb-5"
+              ></span>
             </div>
             <template v-else>
-              <div v-for="item in articleSummary" :key="item.fid" class="d-flex flex-stack fw-semibold fs-5 text-muted mb-4 sidebar-results">
-                <router-link class="text-muted text-hover-primary pe-2" :to="{ name: 'category', params: { id: item.fid } }">
-                  <span class="badge badge-light-warning fw-bold my-2 me-3">推荐板块</span>{{ item.name }}
+              <div
+                v-for="item in articleSummary"
+                :key="item.fid"
+                class="d-flex flex-stack fw-semibold fs-5 text-muted mb-4 sidebar-results"
+              >
+                <router-link
+                  class="text-muted text-hover-primary pe-2"
+                  :to="{ name: 'category', params: { id: item.fid } }"
+                >
+                  <span class="badge badge-light-warning fw-bold my-2 me-3"
+                    >推荐板块</span
+                  >{{ item.name }}
                 </router-link>
-                <div>共 <span class="badge badge-light-info fw-bold my-2">{{ item.total }}</span> 篇</div>
+                <div>
+                  共
+                  <span class="badge badge-light-info fw-bold my-2">{{
+                    item.total
+                  }}</span>
+                  篇
+                </div>
               </div>
             </template>
           </div>
 
           <div v-if="asideLoading || aside.related.length" class="mb-16">
             <h4 class="text-dark mb-7">相关文章</h4>
-            <div v-if="asideLoading" class="placeholder-glow" aria-label="正在加载相关文章">
-              <div v-for="item in 3" :key="item" class="d-flex align-items-center mb-7">
-                <span class="placeholder rounded latest-image-placeholder me-4"></span>
+            <div
+              v-if="asideLoading"
+              class="placeholder-glow"
+              aria-label="正在加载相关文章"
+            >
+              <div
+                v-for="item in 3"
+                :key="item"
+                class="d-flex align-items-center mb-7"
+              >
+                <span
+                  class="placeholder rounded latest-image-placeholder me-4"
+                ></span>
                 <div class="flex-grow-1">
                   <span class="placeholder col-12 d-block mb-3"></span>
                   <span class="placeholder col-7 d-block"></span>
                 </div>
               </div>
             </div>
-            <div v-else v-for="item in aside.related" :key="item.ID" class="d-flex mb-7 sidebar-results">
+            <div
+              v-else
+              v-for="item in aside.related"
+              :key="item.ID"
+              class="d-flex mb-7 sidebar-results"
+            >
               <div class="symbol symbol-60px symbol-2by3 me-4">
-                <div class="symbol-label" :style="{ backgroundImage: `url(${item.pic})` }"></div>
+                <div
+                  class="symbol-label"
+                  :style="{ backgroundImage: `url(${item.pic})` }"
+                ></div>
               </div>
               <div class="align-self-center">
-                <span class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link" @click="gotoContent(item)">
+                <span
+                  class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link"
+                  @click="gotoContent(item)"
+                >
                   {{ item.title }}
                 </span>
               </div>
@@ -163,33 +295,66 @@
 
           <div v-if="asideLoading || aside.hot.length" class="mb-16">
             <h4 class="text-dark mb-7">热门文章</h4>
-            <div v-if="asideLoading" class="placeholder-glow" aria-label="正在加载热门文章">
-              <div v-for="item in 3" :key="item" class="d-flex align-items-center mb-7">
-                <span class="placeholder rounded latest-image-placeholder me-4"></span>
+            <div
+              v-if="asideLoading"
+              class="placeholder-glow"
+              aria-label="正在加载热门文章"
+            >
+              <div
+                v-for="item in 3"
+                :key="item"
+                class="d-flex align-items-center mb-7"
+              >
+                <span
+                  class="placeholder rounded latest-image-placeholder me-4"
+                ></span>
                 <div class="flex-grow-1">
                   <span class="placeholder col-12 d-block mb-3"></span>
                   <span class="placeholder col-7 d-block"></span>
                 </div>
               </div>
             </div>
-            <div v-else v-for="item in aside.hot" :key="item.ID" class="d-flex mb-7 sidebar-results">
+            <div
+              v-else
+              v-for="item in aside.hot"
+              :key="item.ID"
+              class="d-flex mb-7 sidebar-results"
+            >
               <div class="symbol symbol-60px symbol-2by3 me-4">
-                <div class="symbol-label" :style="{ backgroundImage: `url(${item.pic})` }"></div>
+                <div
+                  class="symbol-label"
+                  :style="{ backgroundImage: `url(${item.pic})` }"
+                ></div>
               </div>
               <div class="align-self-center">
-                <span class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link" @click="gotoContent(item)">
+                <span
+                  class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link"
+                  @click="gotoContent(item)"
+                >
                   {{ item.title }}
                 </span>
-                <span class="text-muted fs-8 d-block mt-1">{{ item.view || 0 }} 次阅读</span>
+                <span class="text-muted fs-8 d-block mt-1"
+                  >{{ item.view || 0 }} 次阅读</span
+                >
               </div>
             </div>
           </div>
 
           <div>
             <h4 class="text-dark mb-7">最新发布</h4>
-            <div v-if="latestLoading" class="placeholder-glow" aria-label="正在加载最新文章">
-              <div v-for="item in 4" :key="item" class="d-flex align-items-center mb-7">
-                <span class="placeholder rounded latest-image-placeholder me-4"></span>
+            <div
+              v-if="latestLoading"
+              class="placeholder-glow"
+              aria-label="正在加载最新文章"
+            >
+              <div
+                v-for="item in 4"
+                :key="item"
+                class="d-flex align-items-center mb-7"
+              >
+                <span
+                  class="placeholder rounded latest-image-placeholder me-4"
+                ></span>
                 <div class="flex-grow-1">
                   <span class="placeholder col-12 d-block mb-3"></span>
                   <span class="placeholder col-7 d-block"></span>
@@ -197,12 +362,22 @@
               </div>
             </div>
             <template v-else>
-              <div v-for="item in articleList" :key="item.ID" class="d-flex mb-7 sidebar-results">
+              <div
+                v-for="item in articleList"
+                :key="item.ID"
+                class="d-flex mb-7 sidebar-results"
+              >
                 <div class="symbol symbol-60px symbol-2by3 me-4">
-                  <div class="symbol-label" :style="{ backgroundImage: `url(${item.pic})` }"></div>
+                  <div
+                    class="symbol-label"
+                    :style="{ backgroundImage: `url(${item.pic})` }"
+                  ></div>
                 </div>
                 <div class="align-self-center">
-                  <span class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link" @click="gotoContent(item)">
+                  <span
+                    class="text-dark fw-bold text-hover-primary fs-6 pe-4 article-link"
+                    @click="gotoContent(item)"
+                  >
                     {{ item.title }}
                   </span>
                 </div>
@@ -216,7 +391,14 @@
 
   <Teleport to="body">
     <div v-if="lightboxSrc" class="image-lightbox" @click.self="closeLightbox">
-      <button type="button" class="image-lightbox-close" aria-label="关闭大图" @click="closeLightbox">×</button>
+      <button
+        type="button"
+        class="image-lightbox-close"
+        aria-label="关闭大图"
+        @click="closeLightbox"
+      >
+        ×
+      </button>
       <img :src="lightboxSrc" :alt="lightboxAlt" />
     </div>
   </Teleport>
@@ -225,8 +407,16 @@
 <script setup lang="ts">
 import { copyText } from "@/utils/clipboard";
 import { readingStats } from "@/utils/reading";
+import SaveForLater from "@/components/blog/SaveForLater.vue";
 import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import dayjs from "dayjs";
 import DOMPurify from "dompurify";
@@ -234,7 +424,12 @@ import MarkdownIt from "markdown-it";
 import Prism from "prismjs";
 import CommentSection from "@/components/blog/CommentSection.vue";
 import PostSkeleton from "@/components/blog/PostSkeleton.vue";
-import type { ArticleBrief, ArticleList, ArticelSummary, PostAside } from "@/core/blog/ArticleTypes";
+import type {
+  ArticleBrief,
+  ArticleList,
+  ArticelSummary,
+  PostAside,
+} from "@/core/blog/ArticleTypes";
 import { absoluteUrl, applySeo, stripHtml } from "@/core/seo";
 import { getAssetPath } from "@/core/helpers/assets";
 import { useSiteStore } from "@/stores/site";
@@ -251,6 +446,7 @@ const contentRef = ref<HTMLElement>();
 const articleRef = ref<HTMLElement>();
 const loading = ref(true);
 const loadError = ref(false);
+const articleUnavailable = ref(false);
 const summaryLoading = ref(true);
 const latestLoading = ref(true);
 let requestSequence = 0;
@@ -271,16 +467,17 @@ const lightboxSrc = ref("");
 const lightboxAlt = ref("");
 const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
-const decodeHeadingText = (html: string) => html
-  .replace(/<[^>]+>/g, "")
-  .replace(/&nbsp;/g, " ")
-  .replace(/&amp;/g, "&")
-  .replace(/&lt;/g, "<")
-  .replace(/&gt;/g, ">")
-  .replace(/&quot;/g, "\"")
-  .replace(/&#39;/g, "'")
-  .replace(/\s+/g, " ")
-  .trim();
+const decodeHeadingText = (html: string) =>
+  html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 
 // 把标题锚点写进 HTML。只改 DOM 的话，正文重新渲染后锚点会丢，目录就跳不到。
 const headingPattern = () => /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/gi;
@@ -290,23 +487,29 @@ const injectHeadingIds = (html: string) => {
   const hasSection = matches.some((match) => match[1] !== "1");
   const items: TocItem[] = [];
   let index = 0;
-  const output = html.replace(headingPattern(), (full, level: string, attrs: string, inner: string) => {
-    if (hasSection && level === "1") return full;
-    const text = decodeHeadingText(inner);
-    if (!text) return full;
-    index += 1;
-    const existing = attrs.match(/\sid=["']([^"']+)["']/i);
-    const id = existing?.[1] || `section-${index}`;
-    items.push({ id, text, level: Number(level) });
-    if (existing) return full;
-    return `<h${level}${attrs} id="${id}">${inner}</h${level}>`;
-  });
+  const output = html.replace(
+    headingPattern(),
+    (full, level: string, attrs: string, inner: string) => {
+      if (hasSection && level === "1") return full;
+      const text = decodeHeadingText(inner);
+      if (!text) return full;
+      index += 1;
+      const existing = attrs.match(/\sid=["']([^"']+)["']/i);
+      const id = existing?.[1] || `section-${index}`;
+      items.push({ id, text, level: Number(level) });
+      if (existing) return full;
+      return `<h${level}${attrs} id="${id}">${inner}</h${level}>`;
+    }
+  );
   return { html: output, toc: items };
 };
 
 const renderedArticle = computed(() => {
   const source = articleInfo.value.content || "";
-  const html = articleInfo.value.contentFormat === "markdown" ? markdown.render(source) : source;
+  const html =
+    articleInfo.value.contentFormat === "markdown"
+      ? markdown.render(source)
+      : source;
   return injectHeadingIds(DOMPurify.sanitize(html, { ADD_ATTR: ["id"] }));
 });
 const sanitizedContent = computed(() => renderedArticle.value.html);
@@ -314,18 +517,33 @@ const toc = computed(() => renderedArticle.value.toc);
 const stats = computed(() => readingStats(sanitizedContent.value));
 const canShare = typeof navigator.share === "function";
 const shareStatus = ref("");
-const articleLink = () => absoluteUrl(`/content/${articleInfo.value.fid}/${articleInfo.value.ID}`);
-const copyArticleLink = async () => { shareStatus.value = await copyText(articleLink()) ? "链接已复制" : "复制失败，请从地址栏复制链接"; };
+const articleLink = () =>
+  absoluteUrl(`/content/${articleInfo.value.fid}/${articleInfo.value.ID}`);
+const copyArticleLink = async () => {
+  shareStatus.value = (await copyText(articleLink()))
+    ? "链接已复制"
+    : "复制失败，请从地址栏复制链接";
+};
 const shareArticle = async () => {
-  try { await navigator.share({ title: articleInfo.value.title, url: articleLink() }); shareStatus.value = ""; }
-  catch (error) { if ((error as Error).name !== "AbortError") await copyArticleLink(); }
+  try {
+    await navigator.share({
+      title: articleInfo.value.title,
+      url: articleLink(),
+    });
+    shareStatus.value = "";
+  } catch (error) {
+    if ((error as Error).name !== "AbortError") await copyArticleLink();
+  }
 };
 
 const formatDateTime = (timestamp?: number) =>
-  timestamp ? dayjs.unix(Number(timestamp)).format("YYYY年MM月DD日 HH时mm分") : "";
+  timestamp
+    ? dayjs.unix(Number(timestamp)).format("YYYY年MM月DD日 HH时mm分")
+    : "";
 
-const enhanceCodeBlocks = async () => {
+const enhanceCodeBlocks = async (sequence: number) => {
   await nextTick();
+  if (sequence !== requestSequence) return;
   const container = contentRef.value;
   if (!container) return;
 
@@ -333,7 +551,9 @@ const enhanceCodeBlocks = async () => {
     const code = pre.querySelector<HTMLElement>("code");
     if (code) Prism.highlightElement(code);
 
-    pre.querySelectorAll(".article-code-copy").forEach(button => button.remove());
+    pre
+      .querySelectorAll(".article-code-copy")
+      .forEach((button) => button.remove());
     const codeText = code?.textContent || pre.textContent || "";
     const button = document.createElement("button");
     button.type = "button";
@@ -341,29 +561,33 @@ const enhanceCodeBlocks = async () => {
     button.textContent = "复制";
     button.setAttribute("aria-label", "复制代码");
     button.addEventListener("click", async () => {
-      button.textContent = await copyText(codeText) ? "已复制" : "复制失败，请手动选择代码";
+      button.textContent = (await copyText(codeText))
+        ? "已复制"
+        : "复制失败，请手动选择代码";
       window.setTimeout(() => (button.textContent = "复制"), 1600);
     });
     pre.appendChild(button);
   });
 };
 
-const getSummary = async (fid: number) => {
+const getSummary = async (fid: number, sequence: number) => {
   summaryLoading.value = true;
   try {
     const res: any = await service.post("/base/getSummary", { id: fid });
-    articleSummary.value = res.data || [];
+    if (sequence === requestSequence) articleSummary.value = res.data || [];
   } catch {
-    articleSummary.value = [];
+    if (sequence === requestSequence) articleSummary.value = [];
   } finally {
-    summaryLoading.value = false;
+    if (sequence === requestSequence) summaryLoading.value = false;
   }
 };
 
 const getArticleList = async () => {
   latestLoading.value = true;
   try {
-    const res: any = await service.get("/base/getArticleList", { params: { page: 1, pageSize: 5 } });
+    const res: any = await service.get("/base/getArticleList", {
+      params: { page: 1, pageSize: 5 },
+    });
     articleList.value = res.data?.list || [];
   } catch {
     articleList.value = [];
@@ -373,15 +597,24 @@ const getArticleList = async () => {
 };
 
 // 站点信息与文章内容共同决定详情页的 SEO 元信息
-const applyArticleSeo = async (article: ArticleList) => {
+const applyArticleSeo = async (article: ArticleList, sequence: number) => {
   const site = await siteStore.loadSiteSetting();
+  if (sequence !== requestSequence) return;
   const canonical = absoluteUrl(`/content/${article.fid}/${article.ID}`);
-  const publishedTime = article.ctime ? dayjs.unix(article.ctime).toISOString() : undefined;
-  const modifiedTime = article.editTime ? dayjs.unix(article.editTime).toISOString() : undefined;
-  const description = stripHtml(sanitizedContent.value) || `${site.siteName} 的文章：${article.title}`;
+  const publishedTime = article.ctime
+    ? dayjs.unix(article.ctime).toISOString()
+    : undefined;
+  const modifiedTime = article.editTime
+    ? dayjs.unix(article.editTime).toISOString()
+    : undefined;
+  const description =
+    article.seoDescription ||
+    article.excerpt ||
+    stripHtml(sanitizedContent.value) ||
+    `${site.siteName} 的文章：${article.title}`;
 
   applySeo({
-    title: `${article.title} - ${site.siteName}`,
+    title: article.seoTitle || `${article.title} - ${site.siteName}`,
     description,
     keywords: [article.title, site.siteName].filter(Boolean).join(","),
     canonical,
@@ -398,7 +631,11 @@ const applyArticleSeo = async (article: ArticleList) => {
         description,
         url: canonical,
         mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-        author: { "@type": "Person", name: site.author || site.siteName, url: absoluteUrl("/about") },
+        author: {
+          "@type": "Person",
+          name: site.author || site.siteName,
+          url: absoluteUrl("/about"),
+        },
         publisher: { "@type": "Organization", name: site.siteName },
         datePublished: publishedTime,
         dateModified: modifiedTime,
@@ -412,24 +649,51 @@ const getArticle = async (id: number) => {
   const sequence = ++requestSequence;
   loading.value = true;
   loadError.value = false;
+  articleUnavailable.value = false;
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    loading.value = false;
+    loadError.value = true;
+    articleUnavailable.value = true;
+    missingArticleSeo();
+    return;
+  }
   shareStatus.value = "";
   activeHeading.value = "";
   readingProgress.value = 0;
   aside.value = { related: [], hot: [] };
+  articleSummary.value = [];
   try {
     const res: any = await service.post("/base/getArticle", { id });
     if (sequence !== requestSequence) return;
     articleInfo.value = res.data;
-    await applyArticleSeo(articleInfo.value);
+    await applyArticleSeo(articleInfo.value, sequence);
+    if (sequence !== requestSequence) return;
     loading.value = false;
-    await Promise.all([getSummary(articleInfo.value.fid), enhanceCodeBlocks(), getPostAside()]);
-    updateReadingState();
-  } catch {
-    if (sequence === requestSequence) loadError.value = true;
+    await Promise.all([
+      getSummary(articleInfo.value.fid, sequence),
+      enhanceCodeBlocks(sequence),
+      getPostAside(sequence),
+    ]);
+    if (sequence === requestSequence) updateReadingState();
+  } catch (error: any) {
+    if (sequence === requestSequence) {
+      loadError.value = true;
+      articleUnavailable.value = error?.response?.status === 404;
+      if (articleUnavailable.value) missingArticleSeo();
+    }
   } finally {
     if (sequence === requestSequence) loading.value = false;
   }
 };
+
+function missingArticleSeo() {
+  applySeo({
+    title: `文章暂不可访问 - ${siteStore.setting.siteName}`,
+    description: "文章可能已下线、删除，或地址不完整。",
+    robots: "noindex, nofollow",
+    siteName: siteStore.setting.siteName,
+  });
+}
 
 const retryArticle = () => {
   const articleId = Number(route.params.id);
@@ -437,7 +701,10 @@ const retryArticle = () => {
 };
 
 const gotoContent = (article: ArticleList | ArticleBrief) => {
-  router.replace({ name: "blog-content", params: { fid: article.fid, id: article.ID } });
+  router.replace({
+    name: "blog-content",
+    params: { fid: article.fid, id: article.ID },
+  });
 };
 
 const readingOffset = () => {
@@ -449,8 +716,13 @@ const readingOffset = () => {
 const scrollToHeading = (id: string) => {
   const target = document.getElementById(id);
   if (!target) return;
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+  target.scrollIntoView({
+    behavior: reduceMotion ? "auto" : "smooth",
+    block: "start",
+  });
   activeHeading.value = id;
 };
 
@@ -475,11 +747,15 @@ const onContentClick = (event: MouseEvent) => {
   const link = image.closest("a");
   if (link) {
     const href = link.getAttribute("href") || "";
-    const sameImage = href === image.getAttribute("src") || href === image.currentSrc;
+    const sameImage =
+      href === image.getAttribute("src") || href === image.currentSrc;
     if (!sameImage && href && !href.startsWith("#")) return;
     event.preventDefault();
   }
-  openLightbox(image.currentSrc || image.src, image.alt || articleInfo.value.title || "");
+  openLightbox(
+    image.currentSrc || image.src,
+    image.alt || articleInfo.value.title || ""
+  );
 };
 
 // 阅读进度按正文区域计算，顶部细条用缩放绘制，避免宽度动画拖在滚动后面
@@ -522,20 +798,25 @@ const handleKeydown = (event: KeyboardEvent) => {
 };
 
 // 相关文章与热门文章
-const getPostAside = async () => {
+const getPostAside = async (sequence: number) => {
   asideLoading.value = true;
   try {
     const res: any = await service.get("/base/getPostAside", {
-      params: { fid: articleInfo.value.fid, exclude: articleInfo.value.ID, limit: 5 },
+      params: {
+        fid: articleInfo.value.fid,
+        exclude: articleInfo.value.ID,
+        limit: 5,
+      },
     });
+    if (sequence !== requestSequence) return;
     aside.value = {
       related: res.data?.related || [],
       hot: res.data?.hot || [],
     };
   } catch {
-    aside.value = { related: [], hot: [] };
+    if (sequence === requestSequence) aside.value = { related: [], hot: [] };
   } finally {
-    asideLoading.value = false;
+    if (sequence === requestSequence) asideLoading.value = false;
   }
 };
 
@@ -545,6 +826,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  requestSequence++;
   window.removeEventListener("scroll", handleScroll);
   window.removeEventListener("keydown", handleKeydown);
   if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
@@ -564,20 +846,32 @@ watch(
   () => route.params.id,
   (id) => {
     const articleId = Number(id);
-    if (articleId) getArticle(articleId);
+    void getArticle(articleId);
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 getArticleList();
 </script>
 
 <style scoped lang="scss">
-.article-link { cursor: pointer; }
-.post-loaded { animation: content-enter .28s ease-out; }
-.placeholder { background-color: var(--kt-gray-300); }
-.latest-image-placeholder { width: 60px; height: 80px; flex: 0 0 60px; }
-.sidebar-results { animation: content-enter .24s ease-out; }
+.article-link {
+  cursor: pointer;
+}
+.post-loaded {
+  animation: content-enter 0.28s ease-out;
+}
+.placeholder {
+  background-color: var(--kt-gray-300);
+}
+.latest-image-placeholder {
+  width: 60px;
+  height: 80px;
+  flex: 0 0 60px;
+}
+.sidebar-results {
+  animation: content-enter 0.24s ease-out;
+}
 
 /* 顶部阅读进度。参考 PaperMod / NexT：固定在视口最上沿，用缩放而不是改宽度 */
 .reading-progress {
@@ -640,11 +934,22 @@ getArticleList();
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.toc-link:hover { color: var(--kt-primary); }
-.toc-level-3 { padding-left: 1.6rem; font-size: 0.82rem; }
-.toc-active { border-left-color: var(--kt-primary); color: var(--kt-primary); font-weight: 600; }
+.toc-link:hover {
+  color: var(--kt-primary);
+}
+.toc-level-3 {
+  padding-left: 1.6rem;
+  font-size: 0.82rem;
+}
+.toc-active {
+  border-left-color: var(--kt-primary);
+  color: var(--kt-primary);
+  font-weight: 600;
+}
 
-.article-content :deep(img) { cursor: pointer; }
+.article-content :deep(img) {
+  cursor: pointer;
+}
 
 .image-lightbox {
   position: fixed;
@@ -684,17 +989,28 @@ getArticleList();
 }
 
 @keyframes lightbox-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes content-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .article-content {
   color: var(--kt-text-gray-700);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.9;
@@ -711,14 +1027,33 @@ getArticleList();
   scroll-margin-top: 104px;
 }
 
-.article-content :deep(h1) { margin: 2.8rem 0 1.2rem; font-size: 2rem; }
-.article-content :deep(h2) { margin: 2.5rem 0 1rem; font-size: 1.65rem; }
-.article-content :deep(h3) { margin: 2rem 0 0.85rem; font-size: 1.3rem; }
-.article-content :deep(h4) { margin: 1.75rem 0 0.7rem; font-size: 1.1rem; }
-.article-content :deep(p) { margin: 0 0 1.25rem; }
+.article-content :deep(h1) {
+  margin: 2.8rem 0 1.2rem;
+  font-size: 2rem;
+}
+.article-content :deep(h2) {
+  margin: 2.5rem 0 1rem;
+  font-size: 1.65rem;
+}
+.article-content :deep(h3) {
+  margin: 2rem 0 0.85rem;
+  font-size: 1.3rem;
+}
+.article-content :deep(h4) {
+  margin: 1.75rem 0 0.7rem;
+  font-size: 1.1rem;
+}
+.article-content :deep(p) {
+  margin: 0 0 1.25rem;
+}
 .article-content :deep(ul),
-.article-content :deep(ol) { margin: 0 0 1.4rem; padding-left: 1.6rem; }
-.article-content :deep(li) { margin: 0.35rem 0; }
+.article-content :deep(ol) {
+  margin: 0 0 1.4rem;
+  padding-left: 1.6rem;
+}
+.article-content :deep(li) {
+  margin: 0.35rem 0;
+}
 
 .article-content :deep(a) {
   color: var(--kt-primary);
@@ -735,7 +1070,9 @@ getArticleList();
   background: var(--kt-gray-100);
 }
 
-.article-content :deep(blockquote p:last-child) { margin-bottom: 0; }
+.article-content :deep(blockquote p:last-child) {
+  margin-bottom: 0;
+}
 
 .article-content :deep(img) {
   display: block;
@@ -779,7 +1116,8 @@ getArticleList();
   border: 0;
   background: transparent !important;
   color: inherit;
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono",
+    monospace;
   font-size: inherit;
   text-shadow: none;
   white-space: inherit;
@@ -797,7 +1135,10 @@ getArticleList();
   font: 12px/1.3 Inter, sans-serif;
 }
 
-.article-content :deep(.article-code-copy:hover) { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.article-content :deep(.article-code-copy:hover) {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
 
 .article-content :deep(table) {
   display: block;
@@ -808,15 +1149,31 @@ getArticleList();
 }
 
 .article-content :deep(th),
-.article-content :deep(td) { padding: 0.7rem 0.9rem; border: 1px solid var(--kt-gray-300); text-align: left; }
-.article-content :deep(th) { background: var(--kt-gray-100); color: var(--kt-text-gray-900); }
+.article-content :deep(td) {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--kt-gray-300);
+  text-align: left;
+}
+.article-content :deep(th) {
+  background: var(--kt-gray-100);
+  color: var(--kt-text-gray-900);
+}
 
 @media (max-width: 767.98px) {
-  .article-content { font-size: 15px; line-height: 1.85; }
-  .article-content :deep(pre) { padding: 1rem 3.2rem 1rem 1rem; font-size: 13px; }
+  .article-content {
+    font-size: 15px;
+    line-height: 1.85;
+  }
+  .article-content :deep(pre) {
+    padding: 1rem 3.2rem 1rem 1rem;
+    font-size: 13px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .post-loaded, .sidebar-results { animation: none; }
+  .post-loaded,
+  .sidebar-results {
+    animation: none;
+  }
 }
 </style>

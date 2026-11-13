@@ -36,8 +36,14 @@ const MainMenuConfig: Array<MenuItem> = [
       {
         heading: "添加文章",
         route: "/admin/article/content",
-      }
-    ]
+      },
+    ],
+  },
+  {
+    heading: "标签管理",
+    route: "/admin/tags",
+    svgIcon: getAssetPath("/media/icons/duotune/general/gen022.svg"),
+    fontIcon: "bi-tags",
   },
   {
     heading: "评论管理",

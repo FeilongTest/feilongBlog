@@ -1,20 +1,65 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
+  <div v-if="currentTag" class="card mb-7">
+    <div class="card-body py-6">
+      <router-link to="/tags" class="text-muted fs-7">全部标签</router-link>
+      <h1 class="fs-2 fw-bold mt-3"># {{ currentTag.name }}</h1>
+      <p class="text-muted mb-0">
+        {{ currentTag.description || `关于 ${currentTag.name} 的文章。` }}
+      </p>
+    </div>
+  </div>
+  <div v-if="tagError" class="alert alert-warning">
+    标签不存在，或暂时没有公开文章。<router-link to="/tags" class="ms-3"
+      >查看其他标签</router-link
+    >
+  </div>
   <div v-if="keyword" class="card mb-7">
-    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-5">
+    <div
+      class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-5"
+    >
       <div class="d-flex align-items-center">
         <span class="svg-icon svg-icon-2x svg-icon-primary me-3">
-          <inline-svg :src="getAssetPath('/media/icons/duotune/general/gen021.svg')" />
+          <inline-svg
+            :src="getAssetPath('/media/icons/duotune/general/gen021.svg')"
+          />
         </span>
         <div>
           <div class="fw-bold text-gray-900">“{{ keyword }}”的搜索结果</div>
-          <div class="text-muted fs-7">{{ loading ? "正在搜索…" : `找到 ${total} 篇文章` }}</div>
+          <div class="text-muted fs-7">
+            {{ loading ? "正在搜索…" : `找到 ${total} 篇文章` }}
+          </div>
         </div>
       </div>
-      <button type="button" class="btn btn-sm btn-light-primary" @click="clearSearch">清除搜索</button>
+      <div class="d-flex align-items-center gap-3">
+        <select
+          v-model="scope"
+          aria-label="搜索范围"
+          class="form-select form-select-sm w-auto"
+          @change="changeScope"
+        >
+          <option value="title">只搜标题</option>
+          <option value="all">标题与正文</option></select
+        ><button
+          type="button"
+          class="btn btn-sm btn-light-primary"
+          @click="clearSearch"
+        >
+          清除搜索
+        </button>
+      </div>
     </div>
   </div>
 
+  <div v-if="loadError && !tagError" class="alert alert-danger">
+    文章加载失败。<button
+      type="button"
+      class="btn btn-sm btn-light ms-3"
+      @click="getArticleList"
+    >
+      重新加载
+    </button>
+  </div>
   <div v-if="loading" class="row g-5 g-xl-8" aria-label="正在加载文章">
     <div v-for="column in 2" :key="column" class="col-xl-6">
       <BlogFeedSkeleton v-for="item in 3" :key="item" class="mb-5 mb-xl-8" />
@@ -23,10 +68,20 @@
 
   <div v-else-if="articleList.length" class="row g-5 g-xl-8 feed-results">
     <div class="col-xl-6">
-      <BlogFeeds v-for="article in leftColumn" :key="article.ID" class="mb-5 mb-xl-8" :article="article" />
+      <BlogFeeds
+        v-for="article in leftColumn"
+        :key="article.ID"
+        class="mb-5 mb-xl-8"
+        :article="article"
+      />
     </div>
     <div class="col-xl-6">
-      <BlogFeeds v-for="article in rightColumn" :key="article.ID" class="mb-5 mb-xl-8" :article="article" />
+      <BlogFeeds
+        v-for="article in rightColumn"
+        :key="article.ID"
+        class="mb-5 mb-xl-8"
+        :article="article"
+      />
     </div>
   </div>
 
@@ -38,19 +93,29 @@
     </div>
   </div>
 
-  <div v-if="!loading" class="d-flex flex-stack flex-wrap gap-4 pt-5 feed-results">
+  <div
+    v-if="!loading"
+    class="d-flex flex-stack flex-wrap gap-4 pt-5 feed-results"
+  >
     <div class="fs-6 fw-semibold text-gray-600">共 {{ total }} 篇文章</div>
-    <TablePagination v-if="total > pageSize" :total-pages="Math.ceil(total / pageSize)" :total="total"
-      :per-page="pageSize" :current-page="page" @page-change="pageChange" />
+    <TablePagination
+      v-if="total > pageSize"
+      :total-pages="Math.ceil(total / pageSize)"
+      :total="total"
+      :per-page="pageSize"
+      :current-page="page"
+      @page-change="pageChange"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import BlogFeeds from "@/components/blog/BlogFeeds.vue";
 import BlogFeedSkeleton from "@/components/blog/BlogFeedSkeleton.vue";
 import TablePagination from "@/components/kt-datatable/table-partials/table-content/table-footer/TablePagination.vue";
+import type { Tag } from "@/core/blog/PublishingTypes";
 import type { ArticleList } from "@/core/blog/ArticleTypes";
 import { absoluteUrl, applySeo } from "@/core/seo";
 import { getAssetPath } from "@/core/helpers/assets";
@@ -62,31 +127,64 @@ const total = ref(0);
 const pageSize = ref(10);
 const articleList = ref<ArticleList[]>([]);
 const fid = ref(0);
+const tagId = ref(0);
+const currentTag = ref<Tag>();
+const tagError = ref(false);
+const scope = ref("title");
+const loadError = ref(false);
 const keyword = ref("");
 const loading = ref(true);
 let requestSequence = 0;
 const router = useRouter();
 const siteStore = useSiteStore();
 
-const leftColumn = computed(() => articleList.value.filter((_, index) => index % 2 === 0));
-const rightColumn = computed(() => articleList.value.filter((_, index) => index % 2 === 1));
+const leftColumn = computed(() =>
+  articleList.value.filter((_, index) => index % 2 === 0)
+);
+const rightColumn = computed(() =>
+  articleList.value.filter((_, index) => index % 2 === 1)
+);
 
 const syncRoute = () => {
   const route = router.currentRoute.value;
-  page.value = Math.min(1000000, Math.max(1, Number.parseInt(String(route.query.page || "1"), 10) || 1));
+  page.value = Math.min(
+    1000000,
+    Math.max(1, Number.parseInt(String(route.query.page || "1"), 10) || 1)
+  );
   fid.value = route.name === "category" ? Number(route.params.id) : 0;
   keyword.value = route.query.keyword ? String(route.query.keyword) : "";
+  tagId.value = route.name === "tag" ? Number(route.params.id) : 0;
+  scope.value = route.query.scope === "all" ? "all" : "title";
 };
 
 // 首页、分类页与搜索结果页各自的 SEO 信息
-const updateSeo = async () => {
+const updateSeo = async (sequence: number) => {
   const site = await siteStore.loadSiteSetting();
+  if (sequence !== requestSequence) return;
+  if (tagError.value) {
+    applySeo({
+      title: `标签不存在 - ${site.siteName}`,
+      description: "该标签不存在或暂时没有公开文章。",
+      robots: "noindex, nofollow",
+      siteName: site.siteName,
+    });
+    return;
+  }
   const params = new URLSearchParams();
-  if (keyword.value) params.set("keyword", keyword.value);
+  if (keyword.value) {
+    params.set("keyword", keyword.value);
+    if (scope.value === "all") params.set("scope", "all");
+  }
   if (page.value > 1) params.set("page", String(page.value));
-  const canonical = absoluteUrl(router.currentRoute.value.path + (params.size ? `?${params.toString()}` : ""));
+  const canonical = absoluteUrl(
+    router.currentRoute.value.path +
+      (params.size ? `?${params.toString()}` : "")
+  );
   const pageSuffix = page.value > 1 ? ` - 第 ${page.value} 页` : "";
-  const robots = keyword.value || page.value > 1 ? "noindex, follow" : "index, follow";
+  const robots =
+    loadError.value || keyword.value || page.value > 1
+      ? "noindex, follow"
+      : "index, follow";
 
   // 站内搜索结果不参与收录，避免低质量页面被索引
   if (keyword.value) {
@@ -101,14 +199,32 @@ const updateSeo = async () => {
     return;
   }
 
+  if (currentTag.value) {
+    const tag = currentTag.value;
+    applySeo({
+      title: `${tag.name} 专题 - ${site.siteName}${pageSuffix}`,
+      description:
+        tag.description ||
+        `关于 ${tag.name} 的 ${tag.count || total.value} 篇文章。`,
+      canonical,
+      robots,
+      siteName: site.siteName,
+    });
+    return;
+  }
   if (fid.value) {
     await siteStore.loadCategories();
+    if (sequence !== requestSequence) return;
     const category = siteStore.categoryName(fid.value);
     const title = `${category || "文章"} 分类 - ${site.siteName}${pageSuffix}`;
     applySeo({
       title,
-      description: `${site.siteName} 中「${category || "该"}」分类下的全部文章列表。`,
-      keywords: [category, site.siteName, site.keywords].filter(Boolean).join(","),
+      description: `${site.siteName} 中「${
+        category || "该"
+      }」分类下的全部文章列表。`,
+      keywords: [category, site.siteName, site.keywords]
+        .filter(Boolean)
+        .join(","),
       canonical,
       robots,
       siteName: site.siteName,
@@ -152,25 +268,68 @@ const updateSeo = async () => {
 const getArticleList = async () => {
   const sequence = ++requestSequence;
   loading.value = true;
+  loadError.value = false;
+  tagError.value = false;
   try {
+    if (
+      router.currentRoute.value.name === "tag" &&
+      (!Number.isSafeInteger(tagId.value) || tagId.value <= 0)
+    )
+      throw new Error("标签编号不合法");
+    if (tagId.value) {
+      const tag = await service.get("/base/getTag", {
+        params: { id: tagId.value },
+      });
+      if (sequence !== requestSequence) return;
+      currentTag.value = tag.data;
+    } else currentTag.value = undefined;
     const { data } = await service.get("/base/getArticleList", {
-      params: { page: page.value, pageSize: pageSize.value, fid: fid.value, keyword: keyword.value || undefined },
+      params: {
+        page: page.value,
+        pageSize: pageSize.value,
+        fid: fid.value,
+        tagId: tagId.value || undefined,
+        keyword: keyword.value || undefined,
+        scope: scope.value === "all" ? "all" : undefined,
+      },
     });
     if (sequence !== requestSequence) return;
     total.value = data?.total || 0;
     articleList.value = data?.list || [];
+  } catch {
+    if (sequence === requestSequence) {
+      loadError.value = true;
+      tagError.value = router.currentRoute.value.name === "tag";
+      currentTag.value = undefined;
+      articleList.value = [];
+      total.value = 0;
+    }
   } finally {
     if (sequence === requestSequence) {
       loading.value = false;
-      void updateSeo();
+      void updateSeo(sequence);
     }
   }
 };
 
-const clearSearch = () => router.push({ name: "blog-home" });
+const clearSearch = () =>
+  router.push({ path: router.currentRoute.value.path, query: {} });
+const changeScope = () =>
+  router.push({
+    query: {
+      ...router.currentRoute.value.query,
+      scope: scope.value === "all" ? "all" : undefined,
+      page: undefined,
+    },
+  });
 
 const pageChange = (newPage: number) => {
-  void router.push({ query: { ...router.currentRoute.value.query, page: newPage > 1 ? String(newPage) : undefined } });
+  void router.push({
+    query: {
+      ...router.currentRoute.value.query,
+      page: newPage > 1 ? String(newPage) : undefined,
+    },
+  });
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -179,19 +338,36 @@ onMounted(() => {
   getArticleList();
 });
 
-watch(() => router.currentRoute.value.fullPath, () => {
-  syncRoute();
-  getArticleList();
+onBeforeUnmount(() => {
+  requestSequence++;
 });
+
+watch(
+  () => router.currentRoute.value.fullPath,
+  () => {
+    syncRoute();
+    getArticleList();
+  }
+);
 </script>
 
 <style scoped>
-.feed-results { animation: content-enter .28s ease-out; }
+.feed-results {
+  animation: content-enter 0.28s ease-out;
+}
 @keyframes content-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .feed-results { animation: none; }
+  .feed-results {
+    animation: none;
+  }
 }
 </style>

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"strings"
 )
 
 type ArticleService struct {
@@ -17,6 +18,12 @@ type ArticleService struct {
 func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []model.Article, total int64, err error) {
 	limit := info.PageSize
 	offset := info.PageSize * (info.Page - 1)
+	if info.Fid > 0 {
+		var category model.Category
+		if err = global.BLOG_DB.Select("id").First(&category, info.Fid).Error; err != nil {
+			return
+		}
+	}
 	// 创建db
 	db := global.BLOG_DB.Model(&model.Article{})
 	//如果拥有搜索条件
@@ -29,9 +36,7 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 	if info.Hide {
 		db = db.Where("status = ?", 1)
 	}
-	if info.Keyword != "" {
-		db = db.Where("title LIKE ?", "%"+info.Keyword+"%")
-	}
+	db = applyArticleFilters(db, info)
 	db = db.Where("status = ?", 0)
 	err = db.Count(&total).Error
 	if err != nil {
@@ -83,7 +88,7 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 		for i := range article {
 			article[i].CommentCount = int(commentMap[article[i].ID])
 			article[i].LikeCount = int(likeMap[article[i].ID])
-			article[i].Summary = plainText(article[i].Content, article[i].ContentFormat, 180)
+			article[i].Summary = articleSummary(article[i])
 			// 信息流普通文章只需摘要；纯文本动态保留正文，详情接口仍返回全文。
 			if article[i].Type != 0 {
 				article[i].Content = ""
@@ -91,6 +96,13 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 		}
 	}
 
+	if err == nil && len(article) > 0 {
+		pointers := make([]*model.Article, 0, len(article))
+		for i := range article {
+			pointers = append(pointers, &article[i])
+		}
+		err = attachArticleTags(global.BLOG_DB, pointers...)
+	}
 	return article, total, err
 }
 
@@ -114,6 +126,16 @@ func (s *ArticleService) GetArticleListAdmin(info model.ArticleSearch) (article 
 	offset := info.PageSize * (info.Page - 1)
 	// 创建db
 	db := global.BLOG_DB.Model(&model.Article{})
+	switch info.State {
+	case "published":
+		db = db.Where("status = ?", model.ArticlePublished)
+	case "hidden":
+		db = db.Where("status = ?", model.ArticleHidden)
+	case "draft":
+		db = db.Where("status = ?", model.ArticleDraft)
+	case "scheduled":
+		db = db.Where("status = ?", model.ArticleScheduled)
+	}
 	//如果拥有搜索条件
 	if info.Fid != 0 {
 		db = db.Where("fid = ?", info.Fid)
@@ -124,14 +146,19 @@ func (s *ArticleService) GetArticleListAdmin(info model.ArticleSearch) (article 
 	if info.Hide {
 		db = db.Where("status = ?", 1)
 	}
-	if info.Keyword != "" {
-		db = db.Where("title LIKE ?", "%"+info.Keyword+"%")
-	}
+	db = applyArticleFilters(db, info)
 	err = db.Count(&total).Error
 	if err != nil {
 		return
 	}
 	err = db.Limit(limit).Offset(offset).Order("ctime desc").Find(&article).Error
+	if err == nil && len(article) > 0 {
+		pointers := make([]*model.Article, 0, len(article))
+		for i := range article {
+			pointers = append(pointers, &article[i])
+		}
+		err = attachArticleTags(global.BLOG_DB, pointers...)
+	}
 	return article, total, err
 }
 
@@ -230,6 +257,7 @@ func (s *ArticleService) GetArticle(id int) (article model.Article, err error) {
 		UpdateColumn("view", gorm.Expr("view + ?", 1)).Error; updateErr == nil {
 		article.View++
 	}
+	err = attachArticleTags(global.BLOG_DB, &article)
 	article.Pic = publicMediaURL(article.Pic)
 	return
 }
@@ -237,57 +265,30 @@ func (s *ArticleService) GetArticle(id int) (article model.Article, err error) {
 // GetArticleAdmin 编辑后台可读取隐藏文章，不增加公开阅读量。
 func (s *ArticleService) GetArticleAdmin(id int) (article model.Article, err error) {
 	err = global.BLOG_DB.First(&article, id).Error
+	if err == nil {
+		err = attachArticleTags(global.BLOG_DB, &article)
+	}
 	return
 }
 
-// CreateArticle 创建文章
-func (s *ArticleService) CreateArticle(article *model.Article) (err error) {
-	article.Ctime = int(time.Now().Unix())
-	article.EditTime = int(time.Now().Unix())
-	article.Uid = 1
-	article.IsTop = 0
-	article.Status = 0
-	article.View = 0
-	err = global.BLOG_DB.Create(article).Error
-	if err == nil {
-		// 新文章发布后刷新站点地图并通知搜索引擎
-		notifySearchEngines(seoService.ArticleURL(article.Fid, article.ID))
-	}
-	return err
+// CreateArticle 创建文章或服务器草稿。
+func (s *ArticleService) CreateArticle(article *model.Article) error {
+	return s.createWithWorkflow(article)
 }
 
-// UpdateArticle 更新文章
-func (s *ArticleService) UpdateArticle(article model.Article) (err error) {
-	if errors.Is(global.BLOG_DB.Where("id = ?", article.ID).First(&model.Article{}).Error, gorm.ErrRecordNotFound) {
-		return gorm.ErrRecordNotFound
-	}
-	article.EditTime = int(time.Now().Unix())
-	err = global.BLOG_DB.Save(&article).Error
-	if err == nil {
-		// 内容更新后刷新站点地图并通知搜索引擎
-		notifySearchEngines(seoService.ArticleURL(article.Fid, article.ID))
-	}
-	return err
+// UpdateArticle 只更新可编辑字段，并使用版本检查避免覆盖其他页面的保存。
+func (s *ArticleService) UpdateArticle(article *model.Article) error {
+	return s.updateWithWorkflow(article)
 }
 
 // DeleteArticle 删除文章
-func (s *ArticleService) DeleteArticle(article model.Article) (err error) {
-	err = global.BLOG_DB.Delete(&article).Error
-	if err == nil {
-		seoService.ResetSitemap()
-		seoService.ResetFeed()
-	}
-	return err
+func (s *ArticleService) DeleteArticle(article model.Article) error {
+	return s.deleteArticles([]int{int(article.ID)})
 }
 
-// DeleteArticleByIds 批量删除文章
-func (s *ArticleService) DeleteArticleByIds(ids request.IdsReq) (err error) {
-	err = global.BLOG_DB.Delete(&[]model.Article{}, "id in ?", ids.Ids).Error
-	if err == nil {
-		seoService.ResetSitemap()
-		seoService.ResetFeed()
-	}
-	return err
+// DeleteArticleByIds 批量删除及清理关联数据。
+func (s *ArticleService) DeleteArticleByIds(ids request.IdsReq) error {
+	return s.deleteArticles(ids.Ids)
 }
 
 // LikeArticle 点赞或取消点赞
@@ -333,4 +334,33 @@ func (s *ArticleService) GetArticleLike(req model.ArticleLikeRequest) (liked boo
 func (s *ArticleService) PublishedArticleExists(id int) error {
 	var article model.Article
 	return global.BLOG_DB.Select("id").Where("id = ? AND status = ?", id, 0).First(&article).Error
+}
+
+func articleSummary(a model.Article) string {
+	if a.Excerpt != "" {
+		return a.Excerpt
+	}
+	return plainText(a.Content, a.ContentFormat, 180)
+}
+
+func applyArticleFilters(db *gorm.DB, info model.ArticleSearch) *gorm.DB {
+	if info.TagID > 0 {
+		db = db.Where("id IN (?)", global.BLOG_DB.Model(&model.ArticleTag{}).Select("article_id").Where("tag_id = ?", info.TagID))
+	}
+	keyword := strings.TrimSpace(info.Keyword)
+	if keyword != "" {
+		// Bound input and escape LIKE wildcard characters: user searches are literal.
+		runes := []rune(keyword)
+		if len(runes) > 80 {
+			runes = runes[:80]
+		}
+		keyword = string(runes)
+		pattern := "%" + strings.NewReplacer("!", "!!", "%", "!%", "_", "!_").Replace(keyword) + "%"
+		if info.Scope == "all" {
+			db = db.Where("(title LIKE ? ESCAPE '!' OR excerpt LIKE ? ESCAPE '!' OR content LIKE ? ESCAPE '!')", pattern, pattern, pattern)
+		} else {
+			db = db.Where("title LIKE ? ESCAPE '!'", pattern)
+		}
+	}
+	return db
 }

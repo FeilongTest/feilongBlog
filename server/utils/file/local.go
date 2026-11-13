@@ -1,8 +1,9 @@
 package file
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"feilongBlog/global"
-	"feilongBlog/utils"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"io"
@@ -28,11 +29,12 @@ type Local struct{}
 func (*Local) UploadFile(file *multipart.FileHeader) (string, string, error) {
 	// 读取文件后缀
 	ext := path.Ext(file.Filename)
-	// 读取文件名并加密
-	name := strings.TrimSuffix(file.Filename, ext)
-	name = utils.MD5V([]byte(name))
-	// 拼接新文件名
-	filename := name + ext
+	// 不以原文件名生成存储 key，避免同日上传同名图片覆盖其他文章的资源。
+	entropy := make([]byte, 16)
+	if _, err := rand.Read(entropy); err != nil {
+		return "", "", err
+	}
+	filename := hex.EncodeToString(entropy) + strings.ToLower(ext)
 	// 尝试创建此路径
 	today := time.Now().Format("2006-01-02")
 
