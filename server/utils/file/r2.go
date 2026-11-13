@@ -22,9 +22,12 @@ type R2 struct {
 func NewR2() *R2 {
 	cfg := global.BLOG_CONFIG.R2
 	client := s3.New(s3.Options{
-		Region:       "auto",
-		BaseEndpoint: aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID)),
-		Credentials:  credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+		// R2 不支持所有可选 AWS 校验算法；仅在操作要求时发送校验和。
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+		Region:                     "auto",
+		BaseEndpoint:               aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID)),
+		Credentials:                credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
 	})
 	return &R2{client: client}
 }

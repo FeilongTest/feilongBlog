@@ -22,7 +22,7 @@ func TestR2Integration(t *testing.T) {
 	if accountID == "" || accessKey == "" || secretKey == "" || bucket == "" {
 		t.Fatal("R2测试环境变量不完整")
 	}
-	client := s3.New(s3.Options{Region: "auto", BaseEndpoint: aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)), Credentials: credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")})
+	client := s3.New(s3.Options{RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired, ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired, Region: "auto", BaseEndpoint: aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)), Credentials: credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")})
 	key := fmt.Sprintf("integration-tests/codex-%d.txt", time.Now().UnixNano())
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

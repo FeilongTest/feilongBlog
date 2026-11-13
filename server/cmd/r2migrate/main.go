@@ -80,9 +80,12 @@ func main() {
 	}
 
 	client := s3.New(s3.Options{
-		Region:       "auto",
-		BaseEndpoint: aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.R2.AccountID)),
-		Credentials:  credentials.NewStaticCredentialsProvider(cfg.R2.AccessKeyID, cfg.R2.SecretAccessKey, ""),
+		// R2 不支持所有可选 AWS 校验算法；仅在操作要求时发送校验和。
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+		Region:                     "auto",
+		BaseEndpoint:               aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.R2.AccountID)),
+		Credentials:                credentials.NewStaticCredentialsProvider(cfg.R2.AccessKeyID, cfg.R2.SecretAccessKey, ""),
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
@@ -163,7 +166,7 @@ func collectImages(root, prefix string) ([]migrationItem, error) {
 
 func migrateFile(ctx context.Context, client *s3.Client, bucket string, item *migrationItem) {
 	head, err := client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(bucket), Key: aws.String(item.Key)})
-	if err == nil && head.ContentLength == item.Size {
+	if err == nil && aws.ToInt64(head.ContentLength) == item.Size {
 		item.Status = "skipped"
 		return
 	}
