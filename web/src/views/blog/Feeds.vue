@@ -73,6 +73,7 @@ const rightColumn = computed(() => articleList.value.filter((_, index) => index 
 
 const syncRoute = () => {
   const route = router.currentRoute.value;
+  page.value = Math.min(1000000, Math.max(1, Number.parseInt(String(route.query.page || "1"), 10) || 1));
   fid.value = route.name === "category" ? Number(route.params.id) : 0;
   keyword.value = route.query.keyword ? String(route.query.keyword) : "";
 };
@@ -80,13 +81,19 @@ const syncRoute = () => {
 // 首页、分类页与搜索结果页各自的 SEO 信息
 const updateSeo = async () => {
   const site = await siteStore.loadSiteSetting();
+  const params = new URLSearchParams();
+  if (keyword.value) params.set("keyword", keyword.value);
+  if (page.value > 1) params.set("page", String(page.value));
+  const canonical = absoluteUrl(router.currentRoute.value.path + (params.size ? `?${params.toString()}` : ""));
+  const pageSuffix = page.value > 1 ? ` - 第 ${page.value} 页` : "";
+  const robots = keyword.value || page.value > 1 ? "noindex, follow" : "index, follow";
 
   // 站内搜索结果不参与收录，避免低质量页面被索引
   if (keyword.value) {
     applySeo({
-      title: `“${keyword.value}”的搜索结果 - ${site.siteName}`,
+      title: `“${keyword.value}”的搜索结果 - ${site.siteName}${pageSuffix}`,
       description: `在 ${site.siteName} 中搜索“${keyword.value}”的相关文章。`,
-      canonical: absoluteUrl(router.currentRoute.value.fullPath),
+      canonical,
       robots: "noindex, follow",
       siteName: site.siteName,
       type: "website",
@@ -97,12 +104,13 @@ const updateSeo = async () => {
   if (fid.value) {
     await siteStore.loadCategories();
     const category = siteStore.categoryName(fid.value);
-    const title = `${category || "文章"} 分类 - ${site.siteName}`;
+    const title = `${category || "文章"} 分类 - ${site.siteName}${pageSuffix}`;
     applySeo({
       title,
       description: `${site.siteName} 中「${category || "该"}」分类下的全部文章列表。`,
       keywords: [category, site.siteName, site.keywords].filter(Boolean).join(","),
-      canonical: absoluteUrl(`/category/${fid.value}`),
+      canonical,
+      robots,
       siteName: site.siteName,
       type: "website",
       section: category || undefined,
@@ -119,10 +127,11 @@ const updateSeo = async () => {
   }
 
   applySeo({
-    title: `${site.siteName} - ${site.siteSlogan}`,
+    title: `${site.siteName} - ${site.siteSlogan}${pageSuffix}`,
     description: site.description,
     keywords: site.keywords,
-    canonical: absoluteUrl("/"),
+    canonical,
+    robots,
     siteName: site.siteName,
     type: "website",
     jsonLd: [
@@ -161,8 +170,7 @@ const getArticleList = async () => {
 const clearSearch = () => router.push({ name: "blog-home" });
 
 const pageChange = (newPage: number) => {
-  page.value = newPage;
-  getArticleList();
+  void router.push({ query: { ...router.currentRoute.value.query, page: newPage > 1 ? String(newPage) : undefined } });
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -172,7 +180,6 @@ onMounted(() => {
 });
 
 watch(() => router.currentRoute.value.fullPath, () => {
-  page.value = 1;
   syncRoute();
   getArticleList();
 });

@@ -193,6 +193,7 @@ import Swal from "sweetalert2";
 import { ElNotification } from "element-plus";
 import service from "@/utils/request";
 import { useAuthStore } from "@/stores/auth";
+import { resolveMediaUrl } from "@/utils/media";
 import { getAssetPath } from "@/core/helpers/assets";
 import type { User } from "@/stores/auth";
 
@@ -209,7 +210,7 @@ const savingProfile = ref(false);
 const uploadingAvatar = ref(false);
 const profileError = ref("");
 const defaultAvatar = getAssetPath("/media/avatars/300-1.jpg");
-const profileAvatar = computed(() => profile.pic || defaultAvatar);
+const profileAvatar = computed(() => resolveMediaUrl(profile.pic) || defaultAvatar);
 
 const loadProfile = async () => {
   const data = await authStore.refreshProfile();
@@ -226,9 +227,7 @@ const uploadAvatar = async (event: Event) => {
     formData.append("file", file);
     const { data } = await service.post("/admin/file/upload", formData);
     const uploadedUrl = String(data.url || "").trim();
-    profile.pic = /^(?:https?:)?\/\//i.test(uploadedUrl) || uploadedUrl.startsWith("/")
-      ? uploadedUrl
-      : uploadedUrl.startsWith("public/") ? uploadedUrl : `public/${uploadedUrl}`;
+    profile.pic = resolveMediaUrl(uploadedUrl);
     ElNotification({ title: "上传成功", message: "头像已上传，保存资料后生效", type: "success" });
   } finally {
     uploadingAvatar.value = false;

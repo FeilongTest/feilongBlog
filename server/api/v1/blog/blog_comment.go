@@ -25,6 +25,10 @@ func (c *CommentApi) GetCommentList(ctx *gin.Context) {
 		return
 	}
 
+	if err := articleApi.PublishedArticleExists(comment.Aid); err != nil {
+		response.FailWithMessage("文章不存在或不可访问", ctx)
+		return
+	}
 	// 查询指定文章的评论，按时间倒序 (status = 0 表示显示)
 	var comments []blog.Comment
 	err = global.BLOG_DB.Where("aid = ? AND status = ?", comment.Aid, 0).
@@ -55,6 +59,10 @@ func (c *CommentApi) CreateComment(ctx *gin.Context) {
 		return
 	}
 
+	if err := articleApi.PublishedArticleExists(comment.Aid); err != nil {
+		response.FailWithMessage("文章不存在或不可访问", ctx)
+		return
+	}
 	// 设置创建时间和状态
 	comment.Ctime = int(time.Now().Unix())
 	comment.Status = 1 // 新评论默认进入待审核状态

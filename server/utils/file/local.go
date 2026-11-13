@@ -65,7 +65,7 @@ func (*Local) UploadFile(file *multipart.FileHeader) (string, string, error) {
 		global.BLOG_LOG.Error("function io.Copy() Filed", zap.Any("err", copyErr.Error()))
 		return "", "", errors.New("function io.Copy() Filed, err:" + copyErr.Error())
 	}
-	return filepath, filename, nil
+	return "/blog/" + strings.TrimLeft(filepath, "/"), filename, nil
 }
 
 //@author: [piexlmax](https://github.com/piexlmax)

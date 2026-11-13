@@ -24,3 +24,11 @@ func TestPublicMediaURLRewritesLegacyAvatar(t *testing.T) {
 		t.Fatalf("blank url was not cleared")
 	}
 }
+
+func TestPublicMediaURLKeepsLocalUploadsOnAPIOrigin(t *testing.T) {
+	for _, raw := range []string{"uploads/file/2023/image.png", "public/uploads/file/2023/image.png", "/public/uploads/file/2023/image.png"} {
+		if got := publicMediaURL(raw); got != "/blog/uploads/file/2023/image.png" {
+			t.Fatalf("%s -> %s", raw, got)
+		}
+	}
+}

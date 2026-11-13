@@ -1,6 +1,7 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import JwtService from "@/core/services/JwtService";
+import { resolveMediaUrl } from "@/utils/media";
 import service from "@/utils/request"
 
 export interface UserData {
@@ -42,6 +43,7 @@ export const useAuthStore = defineStore("auth", () => {
   function setAuth(authUser: UserData) {
     isAuthenticated.value = true;
     user.value = authUser;
+    user.value.user.pic = resolveMediaUrl(user.value.user.pic);
     errors.value = {};
     JwtService.saveToken(user.value.token);
   }
@@ -76,6 +78,8 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function updateProfile(profile: User) {
+    profile = { ...profile, pic: resolveMediaUrl(profile.pic) };
+    publicProfile.value = { trueName: profile.truename, email: profile.email, pic: profile.pic, bio: profile.bio };
     if (user.value?.user) user.value.user = profile;
     else user.value = { token: JwtService.getToken() || "", expiresAt: 0, user: profile };
   }
@@ -94,7 +98,7 @@ export const useAuthStore = defineStore("auth", () => {
     if (!publicProfileRequest) {
       publicProfileRequest = service.get("/base/getContact")
         .then(({ data }) => {
-          publicProfile.value = data || {};
+          publicProfile.value = { ...(data || {}), pic: resolveMediaUrl(data?.pic) };
           return publicProfile.value;
         })
         .finally(() => {

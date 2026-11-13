@@ -18,6 +18,10 @@ func publicMediaURL(raw string) string {
 
 	cleaned := strings.TrimPrefix(raw, "./")
 	cleaned = strings.TrimPrefix(cleaned, "/")
+	local := strings.TrimPrefix(cleaned, "public/")
+	if strings.HasPrefix(local, "uploads/file/") {
+		return "/blog/" + local
+	}
 	lower := strings.ToLower(cleaned)
 	const marker = "public/uploads/"
 	index := strings.Index(lower, marker)

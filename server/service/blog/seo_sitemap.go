@@ -142,16 +142,13 @@ func (s *SeoService) Robots() string {
 	for _, agent := range []string{"Baiduspider", "Baiduspider-image", "Googlebot", "bingbot", "Sogou web spider", "360Spider", "YisouSpider"} {
 		b.WriteString("User-agent: ")
 		b.WriteString(agent)
-		b.WriteString("\nAllow: /\n\n")
+		b.WriteString("\nAllow: /\n")
+		writeRobotExclusions(&b)
+		b.WriteString("\n")
 	}
 	b.WriteString("User-agent: *\n")
 	b.WriteString("Allow: /\n")
-	b.WriteString("Disallow: /admin/\n")
-	b.WriteString("Disallow: /dashboard\n")
-	b.WriteString("Disallow: /sign-in\n")
-	b.WriteString("Disallow: /blog/\n")
-	b.WriteString("Disallow: /*?keyword=\n")
-	b.WriteString("Disallow: /*?page=\n")
+	writeRobotExclusions(&b)
 	b.WriteString("\n")
 	if siteURL := s.SiteURL(); siteURL != "" {
 		b.WriteString("Sitemap: ")
@@ -178,4 +175,10 @@ func (s *SeoService) CanonicalRedirect(path string) string {
 		}
 	}
 	return ""
+}
+
+func writeRobotExclusions(b *strings.Builder) {
+	for _, path := range []string{"/admin", "/dashboard", "/sign-in", "/blog/", "/article/", "/*?keyword=", "/*&keyword=", "/*?page=", "/*&page="} {
+		b.WriteString("Disallow: " + path + "\n")
+	}
 }

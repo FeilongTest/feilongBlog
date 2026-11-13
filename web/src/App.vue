@@ -80,7 +80,6 @@ body,
 @import "animate.css";
 @import "sweetalert2/dist/sweetalert2.css";
 @import "prism-themes/themes/prism-shades-of-purple.css";
-@import "element-plus/dist/index.css";
 
 // Main demo style scss
 @import "assets/sass/element-ui.dark";

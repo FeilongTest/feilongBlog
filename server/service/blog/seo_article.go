@@ -7,14 +7,11 @@ import (
 	"strings"
 )
 
-// 正文直出长度上限，避免单页过大
-const seoBodyLimit = 60000
-
 // articleSeo 文章详情页 SEO 信息
-func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, bool) {
+func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, error) {
 	var article model.Article
 	if err := global.BLOG_DB.Where("id = ? AND status = ?", id, 0).First(&article).Error; err != nil {
-		return nil, false
+		return nil, err
 	}
 
 	categoryName := ""
@@ -42,7 +39,7 @@ func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, bool) 
 		Canonical:   canonical,
 		Robots:      "index, follow",
 		OgType:      "article",
-		Image:       article.Pic,
+		Image:       publicMediaURL(article.Pic),
 		Published:   article.Ctime,
 		Modified:    article.EditTime,
 		Author:      author,
@@ -53,7 +50,7 @@ func (s *SeoService) articleSeo(setting model.Setting, id int) (*PageSeo, bool) 
 		seo.JsonLd = append(seo.JsonLd, s.breadcrumbJsonLd(categoryName, s.absoluteURL(fmt.Sprintf("/category/%d", article.Fid)), article.Title, canonical))
 	}
 	seo.Body = s.renderArticleBody(article, categoryName, author)
-	return seo, true
+	return seo, nil
 }
 
 // articleContentHTML 返回清洗后的正文 HTML，供文章详情页与订阅源共用
@@ -64,7 +61,7 @@ func articleContentHTML(article model.Article) string {
 	} else {
 		content = sanitizeArticleHTML(content)
 	}
-	return truncateRunes(content, seoBodyLimit)
+	return sanitizeArticleHTML(content)
 }
 
 // renderArticleBody 生成文章正文的首屏直出内容，供不执行 JS 的爬虫读取
@@ -121,7 +118,7 @@ func (s *SeoService) articleJsonLd(article model.Article, setting model.Setting,
 		data["articleSection"] = categoryName
 	}
 	if article.Pic != "" {
-		data["image"] = []string{article.Pic}
+		data["image"] = []string{publicMediaURL(article.Pic)}
 	}
 	return data
 }

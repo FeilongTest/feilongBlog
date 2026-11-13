@@ -1,9 +1,12 @@
 package blog
 
 import (
+	"errors"
 	"feilongBlog/global"
 	model "feilongBlog/model/blog"
 	"fmt"
+	"gorm.io/gorm"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -12,10 +15,10 @@ import (
 const seoListLimit = 10
 
 // buildPageSeo 根据请求路径构建页面 SEO 信息，第二个返回值是建议的 HTTP 状态码
-func (s *SeoService) buildPageSeo(path, rawQuery string) (*PageSeo, int) {
+func (s *SeoService) buildPageSeo(path, rawQuery string) (*PageSeo, int, error) {
 	setting, err := settingService.GetSetting()
 	if err != nil {
-		setting = defaultSetting()
+		return nil, 500, err
 	}
 	cleanPath := strings.TrimRight(strings.TrimSpace(path), "/")
 	if cleanPath == "" {
@@ -24,36 +27,51 @@ func (s *SeoService) buildPageSeo(path, rawQuery string) (*PageSeo, int) {
 
 	switch {
 	case cleanPath == "/" || cleanPath == "/index":
-		return s.homeSeo(setting), 200
+		seo := s.homeSeo(setting)
+		if err := s.applyListingQuery(seo, setting, 0, rawQuery); err != nil {
+			return nil, 500, err
+		}
+		return seo, 200, nil
 	case strings.EqualFold(cleanPath, "/about"):
-		return s.aboutSeo(setting), 200
+		return s.aboutSeo(setting), 200, nil
 	case strings.EqualFold(cleanPath, "/archive"):
-		return s.archiveSeo(setting), 200
-	case strings.HasPrefix(cleanPath, "/category/"):
+		return s.archiveSeo(setting), 200, nil
+	case strings.HasPrefix(cleanPath, "/category/") && len(strings.Split(strings.Trim(cleanPath, "/"), "/")) == 2:
 		// 路径形如 /category/:id，分类 ID 位于第 2 段
 		if id := pathSegmentID(cleanPath, 2); id > 0 {
-			if seo, ok := s.categorySeo(setting, id); ok {
-				return seo, 200
+			seo, err := s.categorySeo(setting, id)
+			if err == nil {
+				if err := s.applyListingQuery(seo, setting, id, rawQuery); err != nil {
+					return nil, 500, err
+				}
+				return seo, 200, nil
+			}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, 500, err
 			}
 		}
-	case strings.HasPrefix(cleanPath, "/content/"):
+	case strings.HasPrefix(cleanPath, "/content/") && len(strings.Split(strings.Trim(cleanPath, "/"), "/")) == 3:
 		// 路径形如 /content/:fid/:id，文章 ID 位于第 3 段
 		if id := pathSegmentID(cleanPath, 3); id > 0 {
-			if seo, ok := s.articleSeo(setting, id); ok {
-				return seo, 200
+			seo, err := s.articleSeo(setting, id)
+			if err == nil {
+				return seo, 200, nil
+			}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, 500, err
 			}
 		}
 	}
 
 	// 登录页、后台与不存在的地址不参与收录
-	return s.plainSeo(setting, cleanPath), statusForPath(cleanPath)
+	return s.plainSeo(setting, cleanPath), statusForPath(cleanPath), nil
 }
 
 // statusForPath 判断路径应该返回的状态码，SPA 内部页面返回 200，其余返回 404
 func statusForPath(path string) int {
 	switch {
 	case path == "/sign-in", path == "/404", path == "/500",
-		path == "/dashboard", strings.HasPrefix(path, "/admin"):
+		path == "/dashboard", path == "/admin", strings.HasPrefix(path, "/admin/"):
 		return 200
 	default:
 		return 404
@@ -215,10 +233,10 @@ func (s *SeoService) aboutJsonLd(setting model.Setting, author, bio, email, imag
 }
 
 // categorySeo 分类页 SEO 信息
-func (s *SeoService) categorySeo(setting model.Setting, fid int) (*PageSeo, bool) {
+func (s *SeoService) categorySeo(setting model.Setting, fid int) (*PageSeo, error) {
 	var category model.Category
 	if err := global.BLOG_DB.Where("id = ?", fid).First(&category).Error; err != nil {
-		return nil, false
+		return nil, err
 	}
 	articles := s.recentArticles(fid, seoListLimit)
 	title := fmt.Sprintf("%s 分类下的文章 - %s", category.Name, setting.SiteName)
@@ -235,7 +253,7 @@ func (s *SeoService) categorySeo(setting model.Setting, fid int) (*PageSeo, bool
 	}
 	seo.JsonLd = append(seo.JsonLd, s.collectionJsonLd(title, description, seo.Canonical))
 	seo.Body = s.renderListBody(category.Name, description, articles)
-	return seo, true
+	return seo, nil
 }
 
 // plainSeo 不参与收录页面的 SEO 信息。
@@ -409,4 +427,52 @@ func (s *SeoService) collectionJsonLd(name, description, url string) map[string]
 		"description": description,
 		"url":         url,
 	}
+}
+
+// applyListingQuery 使搜索、分页的直出内容和收录策略与前端保持一致。
+func (s *SeoService) applyListingQuery(seo *PageSeo, setting model.Setting, fid int, rawQuery string) error {
+	query, _ := url.ParseQuery(rawQuery)
+	keyword := strings.TrimSpace(query.Get("keyword"))
+	page, _ := strconv.Atoi(query.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	if page > 1000000 {
+		page = 1000000
+	}
+	var articles []model.Article
+	db := global.BLOG_DB.Where("status = ?", 0)
+	if fid > 0 {
+		db = db.Where("fid = ?", fid)
+	}
+	if keyword != "" {
+		db = db.Where("title LIKE ?", "%"+keyword+"%")
+	}
+	if err := db.Order("istop desc, ctime desc").Offset((page - 1) * seoListLimit).Limit(seoListLimit).Find(&articles).Error; err != nil {
+		return err
+	}
+	path := "/"
+	if fid > 0 {
+		path = fmt.Sprintf("/category/%d", fid)
+	}
+	params := url.Values{}
+	if keyword != "" {
+		params.Set("keyword", keyword)
+		seo.Title = fmt.Sprintf("“%s”的搜索结果 - %s", keyword, setting.SiteName)
+		seo.Description = fmt.Sprintf("在 %s 中搜索“%s”的相关文章。", setting.SiteName, keyword)
+	}
+	if page > 1 {
+		params.Set("page", strconv.Itoa(page))
+		seo.Title += fmt.Sprintf(" - 第 %d 页", page)
+	}
+	if keyword != "" || page > 1 {
+		seo.Robots = "noindex, follow"
+		seo.JsonLd = nil
+	}
+	seo.Canonical = s.absoluteURL(path)
+	if len(params) > 0 {
+		seo.Canonical += "?" + params.Encode()
+	}
+	seo.Body = s.renderCrawlNav() + s.renderListBody(seo.Title, seo.Description, articles)
+	return nil
 }

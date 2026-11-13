@@ -83,6 +83,11 @@ func (s *ArticleService) GetArticleList(info model.ArticleSearch) (article []mod
 		for i := range article {
 			article[i].CommentCount = int(commentMap[article[i].ID])
 			article[i].LikeCount = int(likeMap[article[i].ID])
+			article[i].Summary = plainText(article[i].Content, article[i].ContentFormat, 180)
+			// 信息流普通文章只需摘要；纯文本动态保留正文，详情接口仍返回全文。
+			if article[i].Type != 0 {
+				article[i].Content = ""
+			}
 		}
 	}
 
@@ -211,33 +216,39 @@ func (s *ArticleService) GetPostAside(req model.PostAsideRequest) (aside model.P
 	return aside, nil
 }
 
-// GetArticle 查看文章
+// GetArticle 公开详情只允许读取已发布文章。
 func (s *ArticleService) GetArticle(id int) (article model.Article, err error) {
-	db := global.BLOG_DB.Where("id = ?", id).First(&article)
-	err = db.Error
-	if err == nil {
-		var likeCount int64
-		if countErr := global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", id).Count(&likeCount).Error; countErr == nil {
-			article.LikeCount = int(likeCount)
-		}
+	err = global.BLOG_DB.Where("id = ? AND status = ?", id, 0).First(&article).Error
+	if err != nil {
+		return
 	}
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		return tx.Update("view", gorm.Expr("view + ?", 1)).Error
-	}); err == nil {
-		article.View = article.View + 1
+	var likeCount int64
+	if countErr := global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", id).Count(&likeCount).Error; countErr == nil {
+		article.LikeCount = int(likeCount)
 	}
-	return article, err
+	if updateErr := global.BLOG_DB.Model(&model.Article{}).Where("id = ? AND status = ?", id, 0).
+		UpdateColumn("view", gorm.Expr("view + ?", 1)).Error; updateErr == nil {
+		article.View++
+	}
+	article.Pic = publicMediaURL(article.Pic)
+	return
+}
+
+// GetArticleAdmin 编辑后台可读取隐藏文章，不增加公开阅读量。
+func (s *ArticleService) GetArticleAdmin(id int) (article model.Article, err error) {
+	err = global.BLOG_DB.First(&article, id).Error
+	return
 }
 
 // CreateArticle 创建文章
-func (s *ArticleService) CreateArticle(article model.Article) (err error) {
+func (s *ArticleService) CreateArticle(article *model.Article) (err error) {
 	article.Ctime = int(time.Now().Unix())
 	article.EditTime = int(time.Now().Unix())
 	article.Uid = 1
 	article.IsTop = 0
 	article.Status = 0
 	article.View = 0
-	err = global.BLOG_DB.Create(&article).Error
+	err = global.BLOG_DB.Create(article).Error
 	if err == nil {
 		// 新文章发布后刷新站点地图并通知搜索引擎
 		notifySearchEngines(seoService.ArticleURL(article.Fid, article.ID))
@@ -264,6 +275,7 @@ func (s *ArticleService) DeleteArticle(article model.Article) (err error) {
 	err = global.BLOG_DB.Delete(&article).Error
 	if err == nil {
 		seoService.ResetSitemap()
+		seoService.ResetFeed()
 	}
 	return err
 }
@@ -273,12 +285,16 @@ func (s *ArticleService) DeleteArticleByIds(ids request.IdsReq) (err error) {
 	err = global.BLOG_DB.Delete(&[]model.Article{}, "id in ?", ids.Ids).Error
 	if err == nil {
 		seoService.ResetSitemap()
+		seoService.ResetFeed()
 	}
 	return err
 }
 
 // LikeArticle 点赞或取消点赞
 func (s *ArticleService) LikeArticle(req model.ArticleLikeRequest) (liked bool, count int64, err error) {
+	if err = s.PublishedArticleExists(int(req.Aid)); err != nil {
+		return
+	}
 	err = global.BLOG_DB.Transaction(func(tx *gorm.DB) error {
 		var like model.ArticleLike
 		result := tx.Where("aid = ? AND visitor_id = ?", req.Aid, req.VisitorID).First(&like)
@@ -300,6 +316,9 @@ func (s *ArticleService) LikeArticle(req model.ArticleLikeRequest) (liked bool, 
 
 // GetArticleLike 获取访客的点赞状态
 func (s *ArticleService) GetArticleLike(req model.ArticleLikeRequest) (liked bool, count int64, err error) {
+	if err = s.PublishedArticleExists(int(req.Aid)); err != nil {
+		return
+	}
 	err = global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ?", req.Aid).Count(&count).Error
 	if err != nil {
 		return
@@ -308,4 +327,10 @@ func (s *ArticleService) GetArticleLike(req model.ArticleLikeRequest) (liked boo
 	err = global.BLOG_DB.Model(&model.ArticleLike{}).Where("aid = ? AND visitor_id = ?", req.Aid, req.VisitorID).Count(&likeCount).Error
 	liked = likeCount > 0
 	return
+}
+
+// PublishedArticleExists 供公开评论和点赞校验可见性，不增加阅读量。
+func (s *ArticleService) PublishedArticleExists(id int) error {
+	var article model.Article
+	return global.BLOG_DB.Select("id").Where("id = ? AND status = ?", id, 0).First(&article).Error
 }
