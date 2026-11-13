@@ -12,3 +12,6 @@ HANDOFF.md
 blog-server-*
 web-dist.tar
 *.upx
+
+# 本地维护文档不进入版本库
+/docs/
