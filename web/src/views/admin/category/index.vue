@@ -59,6 +59,9 @@
           <span class="text-muted">正在加载分类...</span>
         </div>
 
+        <div v-else-if="loadError" class="alert alert-danger" role="alert">
+          分类加载失败。<button type="button" class="btn btn-sm btn-light ms-3" @click="getCategoryList">重新加载分类</button>
+        </div>
         <div v-else-if="filteredGroups.length === 0" class="empty-state">
           <span class="empty-icon mb-4"><i class="bi bi-folder2-open"></i></span>
           <h4 class="fw-bold text-gray-800 mb-2">没有找到分类</h4>
@@ -86,7 +89,7 @@
               </div>
               <div class="row-actions">
                 <button class="btn btn-sm btn-light-primary" @click="modify(group.root.ID)"><i class="bi bi-pencil me-2"></i>编辑</button>
-                <button class="btn btn-sm btn-icon btn-light-danger" title="删除" @click="remove(group.root)"><i class="bi bi-trash3"></i></button>
+                <button class="btn btn-sm btn-icon btn-light-danger" :aria-label="`删除分类 ${group.root.name}`" @click="remove(group.root)"><i class="bi bi-trash3"></i></button>
               </div>
             </div>
 
@@ -104,7 +107,7 @@
                 </div>
                 <div class="row-actions">
                   <button class="btn btn-sm btn-light-primary" @click="modify(child.ID)"><i class="bi bi-pencil me-2"></i>编辑</button>
-                  <button class="btn btn-sm btn-icon btn-light-danger" title="删除" @click="remove(child)"><i class="bi bi-trash3"></i></button>
+                  <button class="btn btn-sm btn-icon btn-light-danger" :aria-label="`删除分类 ${child.name}`" @click="remove(child)"><i class="bi bi-trash3"></i></button>
                 </div>
               </div>
               <button class="add-child-row" @click="add(group.root.ID)">
@@ -139,6 +142,7 @@ export default defineComponent({
     const modalParentId = ref(0);
     const keyword = ref("");
     const loading = ref(false);
+    const loadError = ref(false);
     const expandedIds = ref<Set<number>>(new Set());
 
     const groups = computed(() => category.value
@@ -169,10 +173,13 @@ export default defineComponent({
 
     const getCategoryList = async () => {
       loading.value = true;
+      loadError.value = false;
       try {
         const { data } = await service.get("/admin/category/getCategoryList");
         category.value = data || [];
         expandedIds.value = new Set(category.value.filter(item => item.fid === 0).map(item => item.ID));
+      } catch {
+        loadError.value = true;
       } finally {
         loading.value = false;
       }
@@ -204,9 +211,13 @@ export default defineComponent({
         customClass: { confirmButton: "btn btn-danger", cancelButton: "btn btn-light" }, buttonsStyling: false,
       });
       if (!result.isConfirmed) return;
-      await service.delete("/admin/category/delCategory", { data: { ID: item.ID } });
-      ElNotification({ title: "操作成功", message: "分类已删除", type: "success" });
-      await getCategoryList();
+      try {
+        await service.delete("/admin/category/delCategory", { data: { ID: item.ID } });
+        ElNotification({ title: "操作成功", message: "分类已删除", type: "success" });
+        await getCategoryList();
+      } catch {
+        // The request interceptor reports the rejection; keep the category intact.
+      }
     };
 
     const toggle = (id: number) => {
@@ -217,7 +228,7 @@ export default defineComponent({
     const isExpanded = (id: number) => expandedIds.value.has(id) || Boolean(keyword.value);
 
     onMounted(getCategoryList);
-    return { category, modalMode, modalId, modalParentId, keyword, loading, stats, filteredGroups, getCategoryList, modify, add, remove, toggle, isExpanded };
+    return { category, modalMode, modalId, modalParentId, keyword, loading, loadError, stats, filteredGroups, getCategoryList, modify, add, remove, toggle, isExpanded };
   },
 });
 </script>

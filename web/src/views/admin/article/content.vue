@@ -56,7 +56,11 @@
               <!--begin::Input group-->
               <div class="mb-5 fv-row">
                 <!--begin::Label-->
-                <label class="required fs-5 fw-semobold mb-3">文章标题</label>
+                <label
+                  for="article-title"
+                  class="required fs-5 fw-semobold mb-3"
+                  >文章标题</label
+                >
                 <!--end::Label-->
 
                 <!--begin::Input-->
@@ -65,6 +69,7 @@
                   class="form-control form-control-lg form-control-solid"
                   placeholder="请输入文章标题"
                   maxlength="200"
+                  id="article-title"
                   name="title"
                   v-model="articleInfo.title"
                 />
@@ -83,13 +88,16 @@
                 <div class="col-md-12 fv-row">
                   <div class="row fv-row">
                     <div class="col-6">
-                      <label class="required fs-5 fw-semobold mb-3"
+                      <label
+                        for="article-category"
+                        class="required fs-5 fw-semobold mb-3"
                         >文章分类</label
                       >
 
                       <Field
                         class="form-select form-select-lg form-select-solid select2-hidden-accessible"
                         placeholder="请选择文章分类"
+                        id="article-category"
                         name="fid"
                         v-model="articleInfo.fid"
                         as="select"
@@ -117,7 +125,9 @@
                     </div>
 
                     <div class="col-6">
-                      <label class="required fs-5 fw-semobold mb-3"
+                      <label
+                        for="article-type"
+                        class="required fs-5 fw-semobold mb-3"
                         >文章样式</label
                       >
 
@@ -125,6 +135,7 @@
                         as="select"
                         class="form-select form-select-lg form-select-solid"
                         placeholder="请选择文章样式"
+                        id="article-type"
                         name="type"
                         v-model="articleInfo.type"
                       >
@@ -156,6 +167,7 @@
                         ? 'btn-primary'
                         : 'btn-light-primary',
                     ]"
+                    :disabled="uploading"
                     @click="articleInfo.contentFormat = 'html'"
                   >
                     富文本
@@ -168,6 +180,7 @@
                         ? 'btn-primary'
                         : 'btn-light-primary',
                     ]"
+                    :disabled="uploading"
                     @click="articleInfo.contentFormat = 'markdown'"
                   >
                     Markdown
@@ -196,7 +209,12 @@
                   @onCreated="handleCreated"
                 />
               </div>
-              <MarkdownEditor v-else v-model="markdownValue" />
+              <MarkdownEditor
+                v-else
+                ref="markdownEditorRef"
+                v-model="markdownValue"
+                @uploading="markdownUploading = $event"
+              />
             </VForm>
           </div>
           <!--end::Card body-->
@@ -324,7 +342,7 @@
               <button
                 type="button"
                 class="btn btn-sm btn-light-primary"
-                @click="showPreview = true"
+                @click="openPreview"
               >
                 预览文章</button
               ><button
@@ -365,7 +383,13 @@
                   <i class="bi bi-pencil-fill fs-7"></i>
 
                   <!--begin::Inputs-->
-                  <input type="file" name="avatar" accept=".png, .jpg, .jpeg" />
+                  <input
+                    type="file"
+                    name="avatar"
+                    aria-label="上传缩略图"
+                    :disabled="uploading"
+                    accept=".png, .jpg, .jpeg"
+                  />
                   <input type="hidden" name="avatar_remove" />
                   <!--end::Inputs-->
                 </label>
@@ -410,7 +434,8 @@
             <!--begin::Input group-->
             <div class="mt-5">
               <p class="text-muted fs-7" role="status" aria-live="polite">
-                <span v-if="storageError" class="text-danger"
+                <span v-if="uploading">图片正在上传，完成后即可保存。</span>
+                <span v-else-if="storageError" class="text-danger"
                   >本机草稿保存失败，请及时发布或备份内容。</span
                 >
                 <span v-else-if="savedAt"
@@ -431,7 +456,13 @@
                 class="d-none d-lg-block form-control from-control-lg from-control-solid bg-info mb-3 mb-lg-0"
                 style="color: aliceblue"
               >
-                {{ submitting ? "正在保存…" : articleMode }}
+                {{
+                  submitting
+                    ? "正在保存…"
+                    : uploading
+                    ? "图片上传中…"
+                    : articleMode
+                }}
               </button>
             </div>
             <!--end::Input group-->
@@ -458,7 +489,7 @@
       :disabled="submitting || uploading || !!pendingDraft || saveConflict"
       @click="submitBtn"
     >
-      {{ submitting ? "正在保存…" : articleMode }}
+      {{ submitting ? "正在保存…" : uploading ? "图片上传中…" : articleMode }}
     </button>
   </div>
   <el-dialog
@@ -563,7 +594,6 @@ import Swal from "sweetalert2";
 import DOMPurify from "dompurify";
 import { resolveMediaUrl } from "@/utils/media";
 import { getAssetPath } from "@/core/helpers/assets";
-import JwtService from "@/core/services/JwtService";
 import service from "@/utils/request";
 import { useAuthStore } from "@/stores/auth";
 import { useLocalDraft } from "@/composables/useLocalDraft";
@@ -622,6 +652,15 @@ const articleInfo = ref<Partial<ArticleList>>({
 });
 const valueHtml = ref("");
 const markdownValue = ref("");
+const markdownEditorRef = ref<{ flush: () => void }>();
+function flushEditor() {
+  if (articleInfo.value.contentFormat === "markdown")
+    markdownEditorRef.value?.flush();
+}
+function openPreview() {
+  flushEditor();
+  showPreview.value = true;
+}
 const data = ref({ img: "/media/svg/files/blank-image.svg", imgStr: "" });
 const editorRef = shallowRef<IDomEditor>();
 const editorGeneration = ref(0);
@@ -655,7 +694,12 @@ const loadingEditor = ref(true);
 const editorError = ref(false);
 const submitting = ref(false);
 const saveConflict = ref(false);
-const uploading = ref(false);
+const coverUploading = ref(false);
+const markdownUploading = ref(false);
+const richUploads = ref(0);
+const uploading = computed(
+  () => coverUploading.value || markdownUploading.value || richUploads.value > 0
+);
 let loadSequence = 0;
 const articleMode = computed(() =>
   publishStatus.value === 2
@@ -811,6 +855,7 @@ async function loadEditor() {
 
 async function mayLeave() {
   if (submitting.value || uploading.value) return false;
+  flushEditor();
   draft.flush();
   if (!dirty.value || !auth.isAuthenticated) return true;
   const { isConfirmed } = await Swal.fire({
@@ -830,6 +875,7 @@ onBeforeRouteUpdate(
   (to, from) => to.params.id === from.params.id || mayLeave()
 );
 const beforeUnload = (event: BeforeUnloadEvent) => {
+  flushEditor();
   if (!dirty.value && !submitting.value && !uploading.value) return;
   draft.flush();
   event.preventDefault();
@@ -862,7 +908,7 @@ async function changeImage(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file || uploading.value) return;
-  uploading.value = true;
+  coverUploading.value = true;
   try {
     const form = new FormData();
     form.append("file", file);
@@ -872,7 +918,7 @@ async function changeImage(event: Event) {
   } catch {
     /* 请求拦截器已显示上传失败原因。 */
   } finally {
-    uploading.value = false;
+    coverUploading.value = false;
     input.value = "";
   }
 }
@@ -880,29 +926,36 @@ const editorConfig = {
   placeholder: "请输入内容...",
   MENU_CONF: {
     uploadImage: {
-      server:
-        (import.meta.env.VITE_BLOG_API_URL || "/blog") + "/admin/file/upload",
-      fieldName: "file",
-      headers: { "x-token": JwtService.getToken() || "" },
       maxFileSize: 10 * 1024 * 1024,
       allowedFileTypes: ["image/*"],
       base64LimitSize: 0,
-      customInsert(
-        response: any,
+      async customUpload(
+        file: File,
         insert: (url: string, alt: string, href: string) => void
       ) {
-        if (response.code === 0)
+        if (file.size > 10 * 1024 * 1024) {
+          ElNotification({
+            title: "图片过大",
+            message: "单张图片不能超过 10 MB",
+            type: "warning",
+          });
+          return;
+        }
+        richUploads.value++;
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const response = await service.post("/admin/file/upload", form);
           insert(
             resolveMediaUrl(response.data.url),
             response.data.alt || "",
             ""
           );
-        else
-          ElNotification({
-            title: "上传失败",
-            message: response.msg || "请重试",
-            type: "error",
-          });
+        } catch {
+          // Keep editing after the request interceptor reports the upload failure.
+        } finally {
+          richUploads.value--;
+        }
       },
     },
   },
@@ -1005,6 +1058,7 @@ async function submitBtn() {
     saveConflict.value
   )
     return;
+  flushEditor();
   const current = snapshot();
   if (current.status !== 2 && (!current.title.trim() || !current.fid)) {
     ElNotification({

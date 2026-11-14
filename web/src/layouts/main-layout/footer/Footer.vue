@@ -32,6 +32,15 @@
         <li class="menu-item">
           <a href="/rss.xml" class="menu-link px-2">RSS</a>
         </li>
+        <li class="menu-item d-lg-none">
+          <button
+            type="button"
+            class="menu-link px-2 border-0 bg-transparent"
+            @click="showLinks"
+          >
+            友情链接
+          </button>
+        </li>
         <li v-if="icp" class="menu-item">
           <span class="menu-link px-2 text-muted">{{ icp }}</span>
         </li>
@@ -47,6 +56,7 @@
 import { computed, defineComponent, onMounted } from "vue";
 import { footerWidthFluid } from "@/core/helpers/config";
 import { useSiteStore } from "@/stores/site";
+import { DrawerComponent } from "@/assets/ts/components/_DrawerComponent";
 
 export default defineComponent({
   name: "KTFooter",
@@ -56,7 +66,11 @@ export default defineComponent({
     onMounted(() => {
       siteStore.loadSiteSetting().catch(() => undefined);
     });
+    const showLinks = () => {
+      DrawerComponent.getInstance("kt_engage_demos_label")?.show();
+    };
     return {
+      showLinks,
       footerWidthFluid,
       icp,
     };

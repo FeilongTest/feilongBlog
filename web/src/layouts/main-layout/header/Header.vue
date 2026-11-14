@@ -18,17 +18,28 @@
     >
       <div class="d-flex d-lg-none align-items-center ms-n2 me-2">
         <!--begin::Aside mobile toggle-->
-        <div class="btn btn-icon btn-active-icon-primary" id="kt_aside_toggle">
+        <button
+          type="button"
+          class="btn btn-icon btn-active-icon-primary"
+          id="kt_aside_toggle"
+          aria-label="导航菜单"
+          aria-controls="kt_aside"
+          :aria-expanded="asideOpen"
+        >
           <span class="svg-icon svg-icon-1 mt-1">
             <inline-svg
               :src="getAssetPath('/media/icons/duotune/abstract/abs015.svg')"
             />
           </span>
-        </div>
+        </button>
         <!--end::Aside mobile toggle-->
 
         <!--begin::Logo-->
-        <router-link :to="{ name: 'blog-home' }" class="studio-logo studio-logo-mobile" aria-label="返回博客首页">
+        <router-link
+          :to="{ name: 'blog-home' }"
+          class="studio-logo studio-logo-mobile"
+          aria-label="返回博客首页"
+        >
           studio.
         </router-link>
         <!--end::Logo-->
@@ -61,7 +72,13 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent, computed } from "vue";
+import {
+  defineComponent,
+  computed,
+  ref,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 import KTTopbar from "@/layouts/main-layout/header/Topbar.vue";
 import PageTitle from "@/layouts/main-layout/page-title/PageTitle.vue";
 import KTMenu from "@/layouts/main-layout/header/Menu.vue";
@@ -83,7 +100,22 @@ export default defineComponent({
     PageTitle,
   },
   setup() {
-	const authStore = useAuthStore();
+    const authStore = useAuthStore();
+    const asideOpen = ref(false);
+    let observer: MutationObserver | undefined;
+    onMounted(() => {
+      const sync = () => {
+        asideOpen.value =
+          document.body.getAttribute("data-kt-drawer-aside") === "on";
+      };
+      sync();
+      observer = new MutationObserver(sync);
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-kt-drawer-aside"],
+      });
+    });
+    onBeforeUnmount(() => observer?.disconnect());
     const isHeaderSticky = computed(() => {
       if (window.innerWidth > 768) {
         return headerFixed.value;
@@ -93,12 +125,13 @@ export default defineComponent({
     });
 
     return {
+      asideOpen,
       headerWidthFluid,
       headerLeft,
       asideDisplay,
       isHeaderSticky,
       getAssetPath,
-	  authStore,
+      authStore,
     };
   },
 });
@@ -109,8 +142,10 @@ export default defineComponent({
   color: #181c32;
   font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: -.05em;
+  letter-spacing: -0.05em;
 }
 
-[data-theme="dark"] .studio-logo-mobile { color: #fff; }
+[data-theme="dark"] .studio-logo-mobile {
+  color: #fff;
+}
 </style>

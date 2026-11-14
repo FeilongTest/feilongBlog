@@ -1,5 +1,6 @@
 <template>
-  <div
+  <nav
+    aria-label="文章分页"
     class="col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end"
   >
     <div class="dataTables_paginate paging_simple_numbers">
@@ -9,13 +10,19 @@
           :class="{ disabled: isInFirstPage }"
           :style="{ cursor: !isInFirstPage ? 'pointer' : 'auto' }"
         >
-          <a class="page-link" @click="onClickFirstPage">
+          <button
+            type="button"
+            class="page-link"
+            aria-label="第一页"
+            :disabled="isInFirstPage"
+            @click="onClickFirstPage"
+          >
             <span class="svg-icon">
               <inline-svg
                 :src="getAssetPath('/media/icons/duotune/arrows/arr079.svg')"
               />
             </span>
-          </a>
+          </button>
         </li>
 
         <li
@@ -23,13 +30,19 @@
           :class="{ disabled: isInFirstPage }"
           :style="{ cursor: !isInFirstPage ? 'pointer' : 'auto' }"
         >
-          <a class="page-link" @click="onClickPreviousPage">
+          <button
+            type="button"
+            class="page-link"
+            aria-label="上一页"
+            :disabled="isInFirstPage"
+            @click="onClickPreviousPage"
+          >
             <span class="svg-icon">
               <inline-svg
                 :src="getAssetPath('/media/icons/duotune/arrows/arr074.svg')"
               />
             </span>
-          </a>
+          </button>
         </li>
 
         <li
@@ -41,9 +54,15 @@
           :style="{ cursor: !page.isDisabled ? 'pointer' : 'auto' }"
           :key="i"
         >
-          <a class="page-link" @click="onClickPage(page.name)">
+          <button
+            type="button"
+            class="page-link"
+            :aria-label="`第 ${page.name} 页`"
+            :aria-current="isPageActive(page.name) ? 'page' : undefined"
+            @click="onClickPage(page.name)"
+          >
             {{ page.name }}
-          </a>
+          </button>
         </li>
 
         <li
@@ -51,13 +70,19 @@
           :class="{ disabled: isInLastPage }"
           :style="{ cursor: !isInLastPage ? 'pointer' : 'auto' }"
         >
-          <a class="paginate_button page-link" @click="onClickNextPage">
+          <button
+            type="button"
+            class="paginate_button page-link"
+            aria-label="下一页"
+            :disabled="isInLastPage"
+            @click="onClickNextPage"
+          >
             <span class="svg-icon">
               <inline-svg
                 :src="getAssetPath('/media/icons/duotune/arrows/arr071.svg')"
               />
             </span>
-          </a>
+          </button>
         </li>
 
         <li
@@ -65,17 +90,23 @@
           :class="{ disabled: isInLastPage }"
           :style="{ cursor: !isInLastPage ? 'pointer' : 'auto' }"
         >
-          <a class="paginate_button page-link" @click="onClickLastPage">
+          <button
+            type="button"
+            class="paginate_button page-link"
+            aria-label="最后一页"
+            :disabled="isInLastPage"
+            @click="onClickLastPage"
+          >
             <span class="svg-icon">
               <inline-svg
                 :src="getAssetPath('/media/icons/duotune/arrows/arr080.svg')"
               />
             </span>
-          </a>
+          </button>
         </li>
       </ul>
     </div>
-  </div>
+  </nav>
 </template>
 
 <script lang="ts">
@@ -151,26 +182,26 @@ export default defineComponent({
     });
 
     const isInFirstPage = computed(() => {
-      return props.currentPage === 1;
+      return props.currentPage <= 1;
     });
     const isInLastPage = computed(() => {
-      return props.currentPage === props.totalPages;
+      return props.currentPage >= props.totalPages;
     });
 
     const onClickFirstPage = () => {
-      emit("page-change", 1);
+      if (!isInFirstPage.value) emit("page-change", 1);
     };
     const onClickPreviousPage = () => {
-      emit("page-change", props.currentPage - 1);
+      if (!isInFirstPage.value) emit("page-change", props.currentPage - 1);
     };
     const onClickPage = (page: number) => {
       emit("page-change", page);
     };
     const onClickNextPage = () => {
-      emit("page-change", props.currentPage + 1);
+      if (!isInLastPage.value) emit("page-change", props.currentPage + 1);
     };
     const onClickLastPage = () => {
-      emit("page-change", props.totalPages);
+      if (!isInLastPage.value) emit("page-change", props.totalPages);
     };
     const isPageActive = (page: number) => {
       return props.currentPage === page;

@@ -376,3 +376,33 @@ test("标签管理真实创建、重命名和移除，草稿标签不公开", as
   expect(after.title).toBeTruthy();
   expect(after.tagNames).toEqual([]);
 });
+
+test("真实 Markdown 快速输入后首存与刷新都不丢正文", async ({
+  page,
+  request,
+}) => {
+  await signIn(page);
+  await page.goto("/admin/article/content", { waitUntil: "domcontentloaded" });
+  const title = stamp();
+  await page.getByLabel("文章标题", { exact: true }).fill(title);
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  const editor = page
+    .getByRole("textbox", { name: "Markdown 正文", exact: true })
+    .filter({ visible: true });
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await editor.fill("真实隔离数据库验证：输入后立即点击保存。");
+  await page.getByRole("button", { name: "保存草稿", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/article\/content\/\d+$/);
+  const id = Number(new URL(page.url()).pathname.split("/").pop());
+  created.push(id);
+  expect((await adminArticle(request, id)).content).toContain(
+    "真实隔离数据库验证：输入后立即点击保存。"
+  );
+  await expect(page.getByText("离开编辑页面？", { exact: true })).toHaveCount(
+    0
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.locator(".vditor-ir pre[contenteditable=true]")
+  ).toContainText("真实隔离数据库验证：输入后立即点击保存。");
+});

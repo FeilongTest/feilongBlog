@@ -85,7 +85,7 @@
     </div>
   </div>
 
-  <div v-else class="card py-15 text-center feed-results">
+  <div v-else-if="!loadError" class="card py-15 text-center feed-results">
     <div class="card-body">
       <i class="bi bi-search fs-3x text-gray-300"></i>
       <h3 class="mt-5">没有找到相关文章</h3>
@@ -94,7 +94,7 @@
   </div>
 
   <div
-    v-if="!loading"
+    v-if="!loading && !loadError"
     class="d-flex flex-stack flex-wrap gap-4 pt-5 feed-results"
   >
     <div class="fs-6 fw-semibold text-gray-600">共 {{ total }} 篇文章</div>
@@ -270,12 +270,16 @@ const getArticleList = async () => {
   loading.value = true;
   loadError.value = false;
   tagError.value = false;
+  currentTag.value = undefined;
+  let resolvingTag = router.currentRoute.value.name === "tag";
   try {
     if (
       router.currentRoute.value.name === "tag" &&
       (!Number.isSafeInteger(tagId.value) || tagId.value <= 0)
-    )
+    ) {
+      tagError.value = true;
       throw new Error("标签编号不合法");
+    }
     if (tagId.value) {
       const tag = await service.get("/base/getTag", {
         params: { id: tagId.value },
@@ -283,6 +287,7 @@ const getArticleList = async () => {
       if (sequence !== requestSequence) return;
       currentTag.value = tag.data;
     } else currentTag.value = undefined;
+    resolvingTag = false;
     const { data } = await service.get("/base/getArticleList", {
       params: {
         page: page.value,
@@ -296,10 +301,10 @@ const getArticleList = async () => {
     if (sequence !== requestSequence) return;
     total.value = data?.total || 0;
     articleList.value = data?.list || [];
-  } catch {
+  } catch (error: any) {
     if (sequence === requestSequence) {
       loadError.value = true;
-      tagError.value = router.currentRoute.value.name === "tag";
+      tagError.value ||= resolvingTag && error?.response?.status === 404;
       currentTag.value = undefined;
       articleList.value = [];
       total.value = 0;

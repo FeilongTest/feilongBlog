@@ -197,7 +197,7 @@
                 v-model="searchKeyword"
                 type="text"
                 class="form-control form-control-solid ps-10"
-                placeholder="输入文章标题关键字搜索"
+                placeholder="搜索标题、摘要或正文…"
                 @keyup.enter="handleSearch"
               />
               <button
@@ -834,7 +834,8 @@ onBeforeUnmount(() => {
 
 const handleSearch = () => {
   const keyword = searchKeyword.value.trim();
-  if (keyword) router.push({ name: "blog-home", query: { keyword } });
+  if (keyword)
+    router.push({ name: "blog-home", query: { keyword, scope: "all" } });
 };
 
 const clearSearch = () => {
@@ -912,6 +913,14 @@ getArticleList();
   height: 350px;
   object-fit: cover;
   border-radius: 0.75rem;
+}
+
+@media (max-width: 991px) {
+  .article-cover img {
+    height: auto;
+    max-height: min(40vh, 280px);
+    object-fit: contain;
+  }
 }
 
 /* 文章目录 */

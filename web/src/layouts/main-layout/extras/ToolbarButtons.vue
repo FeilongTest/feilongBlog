@@ -1,6 +1,6 @@
 <template>
   <div
-    class="engage-toolbar d-flex position-fixed px-5 fw-bold zindex-2 top-50 end-0 transform-90 mt-20 gap-2"
+    class="engage-toolbar d-none d-lg-flex position-fixed px-5 fw-bold zindex-2 top-50 end-0 transform-90 mt-20 gap-2"
   >
     <!--begin::Links drawer toggle-->
     <button
@@ -16,7 +16,6 @@
       <span>友情链接</span>
     </button>
     <!--end::Links drawer toggle-->
-
   </div>
 </template>
 

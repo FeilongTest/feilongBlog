@@ -96,6 +96,8 @@ export default defineComponent({
         ElNotification({ title: "保存成功", message: `分类“${formData.value.name}”已更新`, type: "success" });
         hideModal(categoryModalRef.value);
         emit("saved");
+      } catch {
+        // Keep the form and its edits available after a rejected save.
       } finally {
         loading.value = false;
       }
