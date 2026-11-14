@@ -15,3 +15,8 @@ web-dist.tar
 
 # 本地维护文档不进入版本库
 /docs/
+
+# Python packaging checks and macOS metadata
+__pycache__/
+._*
+.DS_Store

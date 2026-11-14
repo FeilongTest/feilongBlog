@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
 import { cpSync, chmodSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, basename } from "node:path";
 import type { Plugin } from "vite";
 
 import { defineConfig } from "vite";
@@ -37,6 +37,8 @@ function localVditor(): Plugin {
       cpSync(resolve(root, "dist"), resolve(output, "vendor/vditor/dist"), {
         recursive: true,
         filter: (path) =>
+          !basename(path).startsWith("._") &&
+          basename(path) !== ".DS_Store" &&
           !path.endsWith(".ts") &&
           !path.includes("/dist/ts") &&
           !path.includes("/dist/types"),

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Build a reviewable Linux release; never reads/copies the deployed config or uploads.
 set -euo pipefail
+# macOS cp/tar must not manufacture AppleDouble sidecars from extended attributes.
+export COPYFILE_DISABLE=1
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 arch=${1:-arm64}
 case "$arch" in arm64|amd64) ;; *) echo 'Usage: scripts/release.sh [arm64|amd64] [output-directory]' >&2; exit 2 ;; esac
@@ -42,6 +44,5 @@ TEXT
 find "$stage/$name" -type d -exec chmod 755 {} +
 find "$stage/$name" -type f -exec chmod 644 {} +
 chmod 755 "$stage/$name/server/blog-server"
-(cd "$stage" && tar -czf "$output/$name.tar.gz" "$name")
-(cd "$output" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+python3 "$root/scripts/package-release.py" "$stage/$name" "$output/$name.tar.gz"
 printf 'Release: %s/%s.tar.gz\n' "$output" "$name"
