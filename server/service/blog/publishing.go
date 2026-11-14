@@ -111,7 +111,7 @@ func validateArticleCategory(tx *gorm.DB, article model.Article) error {
 		return nil
 	}
 	var category model.Category
-	if err := tx.Select("id").First(&category, article.Fid).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").First(&category, article.Fid).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return invalidArticle("所选分类不存在")
 		}

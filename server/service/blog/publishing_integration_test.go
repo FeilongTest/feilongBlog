@@ -17,6 +17,7 @@ import (
 	"feilongBlog/global"
 	"feilongBlog/initialize"
 	model "feilongBlog/model/blog"
+	"feilongBlog/model/common/request"
 	service "feilongBlog/service/blog"
 	"feilongBlog/utils"
 	driver "github.com/go-sql-driver/mysql"
@@ -446,5 +447,217 @@ func TestPublishingValidationDoesNotPersistInvalidContent(t *testing.T) {
 	draft.Fid = 0
 	if err := articles.CreateArticle(&draft); err != nil || draft.Title != "未命名草稿" {
 		t.Fatalf("untitled draft=%+v %v", draft, err)
+	}
+}
+
+func TestCategoryDeletionCannotOrphanContent(t *testing.T) {
+	db := publishingDatabase(t)
+	articles := service.ArticleService{}
+	categories := service.CategoryService{}
+	article := sampleArticle(model.ArticleDraft)
+	if err := articles.CreateArticle(&article); err != nil {
+		t.Fatal(err)
+	}
+	if err := categories.DeleteCategory(model.Category{ID: 1}); err == nil {
+		t.Fatal("deleted a category that still owns a private draft")
+	}
+	if err := db.First(&model.Category{}, 1).Error; err != nil {
+		t.Fatal("category disappeared despite rejection")
+	}
+	if err := db.Create(&model.Category{ID: 2, Fid: 1, Name: "子分类"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := articles.DeleteArticle(article); err != nil {
+		t.Fatal(err)
+	}
+	if err := categories.DeleteCategory(model.Category{ID: 1}); err == nil {
+		t.Fatal("deleted a parent while leaving its child orphaned")
+	}
+	if err := categories.CreateCategory(model.Category{Name: "三级分类", Fid: 2}); err == nil {
+		t.Fatal("created a third level invisible in the two-level category UI")
+	}
+	if err := categories.UpdateCategory(model.Category{ID: 1, Name: "循环父分类", Fid: 2}); err == nil {
+		t.Fatal("allowed category cycle")
+	}
+	if err := categories.DeleteCategoryByIds(request.IdsReq{Ids: []int{1, 2}}); err != nil {
+		t.Fatalf("empty complete subtree deletion failed: %v", err)
+	}
+	var count int64
+	db.Model(&model.Category{}).Count(&count)
+	if count != 0 {
+		t.Fatalf("subtree not removed atomically: %d", count)
+	}
+}
+
+func TestScheduledPublishRollsBackAndRetriesAfterStorageFailure(t *testing.T) {
+	db := publishingDatabase(t)
+	articles := service.ArticleService{}
+	article := sampleArticle(model.ArticleScheduled)
+	article.PublishAt = time.Now().Unix() + 120
+	if err := articles.CreateArticle(&article); err != nil {
+		t.Fatal(err)
+	}
+	fail := true
+	const callback = "audit:fail-scheduled-write"
+	if err := db.Callback().Update().Before("gorm:update").Register(callback, func(tx *gorm.DB) {
+		if current, ok := tx.Statement.Model.(*model.Article); ok && current.ID == article.ID && current.Status == model.ArticlePublished && fail {
+			fail = false
+			tx.AddError(errors.New("isolated test: storage write failure"))
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Callback().Update().Remove(callback) })
+	if n, err := articles.PublishDue(context.Background(), article.PublishAt+1); err == nil || n != 0 {
+		t.Fatalf("failure was not reported: %d %v", n, err)
+	}
+	saved, err := articles.GetArticleAdmin(int(article.ID))
+	if err != nil || saved.Status != model.ArticleScheduled || saved.Version != 1 {
+		t.Fatalf("failed transaction changed article: %+v %v", saved, err)
+	}
+	if err := articles.PublishedArticleExists(int(article.ID)); !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatal("failed scheduled article became public")
+	}
+	if n, err := articles.PublishDue(context.Background(), article.PublishAt+2); err != nil || n != 1 {
+		t.Fatalf("retry failed: %d %v", n, err)
+	}
+	revisions, err := articles.ListRevisions(article.ID)
+	if err != nil || len(revisions) != 2 {
+		t.Fatalf("retry produced duplicated or missing revisions: %+v %v", revisions, err)
+	}
+	if n, err := articles.PublishDue(context.Background(), article.PublishAt+3); err != nil || n != 0 {
+		t.Fatalf("published twice: %d %v", n, err)
+	}
+}
+
+func TestPrivatePublishingEndpointsRejectNonAdminAndExpiredTokens(t *testing.T) {
+	publishingDatabase(t)
+	router := initialize.Routers()
+	for _, scenario := range []struct {
+		name    string
+		admin   int
+		expires int64
+		want    int
+	}{
+		{"ordinary user", 0, time.Now().Add(time.Hour).Unix(), 403},
+		{"expired administrator", 1, time.Now().Add(-time.Hour).Unix(), 401},
+	} {
+		token, err := utils.NewJWT().CreateToken(model.CustomClaims{BaseClaims: model.BaseClaims{ID: 23, Admin: scenario.admin}, StandardClaims: jwt.StandardClaims{ExpiresAt: scenario.expires}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, endpoint := range []struct{ method, path, body string }{
+			{"GET", "/admin/article/getArticleList", ""},
+			{"GET", "/admin/article/revisions?id=1", ""},
+			{"GET", "/admin/article/revision?id=1&revisionId=1", ""},
+			{"GET", "/admin/article/tags", ""},
+			{"GET", "/admin/user/profile", ""},
+			{"PATCH", "/admin/article/state", `{"id":1,"version":1,"status":0}`},
+			{"POST", "/admin/article/createArticle", `{"title":"must not be created"}`},
+			{"DELETE", "/admin/article/tags", `{"id":1}`},
+		} {
+			req := httptest.NewRequest(endpoint.method, endpoint.path, strings.NewReader(endpoint.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("x-token", token)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+			if response.Code != scenario.want {
+				t.Errorf("%s %s %s = %d, want %d", scenario.name, endpoint.method, endpoint.path, response.Code, scenario.want)
+			}
+		}
+	}
+}
+
+func TestCategoryDeletionSerializesWithNewDraftsAndChildren(t *testing.T) {
+	db := publishingDatabase(t)
+	for _, child := range []bool{false, true} {
+		for i := 0; i < 6; i++ {
+			parent := model.Category{Name: "并发删除目标"}
+			if err := db.Create(&parent).Error; err != nil {
+				t.Fatal(err)
+			}
+			ready := make(chan struct{})
+			results := make(chan error, 2)
+			go func() { <-ready; results <- (&service.CategoryService{}).DeleteCategory(parent) }()
+			go func() {
+				<-ready
+				if child {
+					results <- (&service.CategoryService{}).CreateCategory(model.Category{Name: "并发子分类", Fid: int(parent.ID)})
+				} else {
+					article := sampleArticle(model.ArticleDraft)
+					article.Fid = int(parent.ID)
+					results <- (&service.ArticleService{}).CreateArticle(&article)
+				}
+			}()
+			close(ready)
+			first, second := <-results, <-results
+			if first == nil && second == nil {
+				t.Fatal("deletion and a dependent write both succeeded")
+			}
+			var parents, articles, children int64
+			db.Model(&model.Category{}).Where("id = ?", parent.ID).Count(&parents)
+			db.Model(&model.Article{}).Where("fid = ?", parent.ID).Count(&articles)
+			db.Model(&model.Category{}).Where("fid = ?", parent.ID).Count(&children)
+			if parents == 0 && (articles > 0 || children > 0) {
+				t.Fatalf("orphaned data: %d articles %d children", articles, children)
+			}
+		}
+	}
+}
+
+func TestPublicCommentsDoNotAcceptIdentityOrExposeEmail(t *testing.T) {
+	db := publishingDatabase(t)
+	if err := db.Exec("ALTER TABLE blog_comment AUTO_INCREMENT = 1").Error; err != nil {
+		t.Fatal(err)
+	}
+	article := sampleArticle(model.ArticlePublished)
+	if err := (&service.ArticleService{}).CreateArticle(&article); err != nil {
+		t.Fatal(err)
+	}
+	router := initialize.Routers()
+	payload := fmt.Sprintf(`{"ID":4294967294,"uid":1,"status":0,"ctime":1,"aid":%d,"name":"测试访客","email":"private-comment@example.com","content":"普通评论"}`, article.ID)
+	req := httptest.NewRequest("POST", "/base/createComment", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != 200 {
+		t.Fatalf("comment creation failed: %d", response.Code)
+	}
+	var comment model.Comment
+	if err := db.Where("aid = ?", article.ID).First(&comment).Error; err != nil {
+		t.Fatal(err)
+	}
+	if comment.ID >= 4294967294 || comment.Uid != 0 || comment.Status != 1 || comment.Ctime <= 1 {
+		t.Fatalf("public caller controlled internal comment fields: id=%d uid=%d status=%d time=%d", comment.ID, comment.Uid, comment.Status, comment.Ctime)
+	}
+	db.Model(&comment).Update("status", 0)
+	req = httptest.NewRequest("GET", fmt.Sprintf("/base/getCommentList?aid=%d", article.ID), nil)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	var result struct {
+		Data []map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Data) != 1 {
+		t.Fatalf("approved comment missing: %s", response.Body.String())
+	}
+	if _, exists := result.Data[0]["email"]; exists {
+		t.Fatal("commenter email exposed anonymously")
+	}
+	if strings.Contains(response.Body.String(), "private-comment@example.com") {
+		t.Fatal("commenter email present in public response")
+	}
+	token, err := utils.NewJWT().CreateToken(model.CustomClaims{BaseClaims: model.BaseClaims{ID: 1, Admin: 1}, StandardClaims: jwt.StandardClaims{ExpiresAt: time.Now().Add(time.Hour).Unix()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = httptest.NewRequest("GET", "/admin/comment/getCommentList?page=1&pageSize=10", nil)
+	req.Header.Set("x-token", token)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != 200 || !strings.Contains(response.Body.String(), "private-comment@example.com") {
+		t.Fatal("administrator lost access to commenter contact details")
 	}
 }

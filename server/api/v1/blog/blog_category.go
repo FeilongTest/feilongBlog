@@ -44,7 +44,7 @@ func (a *CategoryApi) CreateCategory(c *gin.Context) {
 	err = categoryApi.CreateCategory(category)
 	if err != nil {
 		global.BLOG_LOG.Error("创建失败!", zap.Error(err))
-		response.FailWithMessage("创建失败", c)
+		articleFailure(c, err)
 		return
 	}
 	response.OkWithMessage("创建成功", c)
@@ -65,7 +65,7 @@ func (a *CategoryApi) UpdateCategoryById(c *gin.Context) {
 	}
 	if err = categoryApi.UpdateCategory(category); err != nil {
 		global.BLOG_LOG.Error("更新失败!", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
+		articleFailure(c, err)
 	} else {
 		response.OkWithMessage("更新成功", c)
 	}
@@ -87,7 +87,7 @@ func (a *CategoryApi) DelCategoryById(c *gin.Context) {
 	err = categoryApi.DeleteCategory(category)
 	if err != nil {
 		global.BLOG_LOG.Error("删除失败!", zap.Error(err))
-		response.FailWithMessage("删除失败", c)
+		articleFailure(c, err)
 		return
 	}
 	response.OkWithMessage("删除成功", c)
@@ -104,7 +104,7 @@ func (a *CategoryApi) DelCategoryByIds(c *gin.Context) {
 	err = categoryApi.DeleteCategoryByIds(ids)
 	if err != nil {
 		global.BLOG_LOG.Error("删除失败!", zap.Error(err))
-		response.FailWithMessage("删除失败", c)
+		articleFailure(c, err)
 		return
 	}
 	response.OkWithMessage("删除成功", c)

@@ -4,6 +4,7 @@ import (
 	"feilongBlog/global"
 	"feilongBlog/model/blog"
 	"feilongBlog/model/common/response"
+	"net/http"
 	"strings"
 	"time"
 
@@ -30,8 +31,14 @@ func (c *CommentApi) GetCommentList(ctx *gin.Context) {
 		return
 	}
 	// 查询指定文章的评论，按时间倒序 (status = 0 表示显示)
-	var comments []blog.Comment
-	err = global.BLOG_DB.Where("aid = ? AND status = ?", comment.Aid, 0).
+	var comments []struct {
+		ID      uint   `json:"ID"`
+		Name    string `json:"name"`
+		Content string `json:"content"`
+		Ctime   int    `json:"ctime"`
+		Aid     int    `json:"aid"`
+	}
+	err = global.BLOG_DB.Model(&blog.Comment{}).Select("id, name, content, ctime, aid").Where("aid = ? AND status = ?", comment.Aid, 0).
 		Order("ctime desc").
 		Find(&comments).Error
 
@@ -45,6 +52,7 @@ func (c *CommentApi) GetCommentList(ctx *gin.Context) {
 
 // CreateComment 创建评论
 func (c *CommentApi) CreateComment(ctx *gin.Context) {
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 16<<10)
 	var comment blog.Comment
 	err := ctx.ShouldBindJSON(&comment)
 	if err != nil {
@@ -63,7 +71,9 @@ func (c *CommentApi) CreateComment(ctx *gin.Context) {
 		response.FailWithMessage("文章不存在或不可访问", ctx)
 		return
 	}
-	// 设置创建时间和状态
+	// Public callers cannot choose record IDs, impersonate accounts, or exhaust AUTO_INCREMENT.
+	comment.ID = 0
+	comment.Uid = 0
 	comment.Ctime = int(time.Now().Unix())
 	comment.Status = 1 // 新评论默认进入待审核状态
 
