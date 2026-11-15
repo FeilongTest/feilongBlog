@@ -8,7 +8,7 @@
       </div>
       <!--end::Search-->
 
-      <div class="d-flex align-items-center ms-3">
+      <div v-if="isArticle" class="d-flex align-items-center ms-3">
         <router-link
           to="/reading-list"
           class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline w-40px h-40px"
@@ -61,7 +61,8 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { defineComponent } from "vue";
+import { computed, defineComponent } from "vue";
+import { useRoute } from "vue-router";
 import KTSearch from "@/layouts/main-layout/search/Search.vue";
 import KTThemeModeSwitcher from "@/layouts/main-layout/theme-mode/ThemeModeSwitcher.vue";
 
@@ -72,7 +73,10 @@ export default defineComponent({
     KTThemeModeSwitcher,
   },
   setup() {
+    const route = useRoute();
+    const isArticle = computed(() => route.name === "blog-content");
     return {
+      isArticle,
       getAssetPath,
     };
   },

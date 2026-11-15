@@ -34,18 +34,6 @@
         </router-link>
       </div>
 
-      <div class="menu-item">
-        <router-link to="/tags" class="menu-link" active-class="active"
-          ><span class="menu-icon"><i class="bi bi-tags fs-4"></i></span
-          ><span class="menu-title">标签专题</span></router-link
-        >
-      </div>
-      <div class="menu-item">
-        <router-link to="/reading-list" class="menu-link" active-class="active"
-          ><span class="menu-icon"><i class="bi bi-bookmark fs-4"></i></span
-          ><span class="menu-title">稍后阅读</span></router-link
-        >
-      </div>
       <template v-for="(item, i) in category" :key="i">
         <div
           v-if="item.fid == 0"
