@@ -8,14 +8,8 @@
       </div>
       <!--end::Search-->
 
-      <div v-if="isArticle" class="d-flex align-items-center ms-3">
-        <router-link
-          to="/reading-list"
-          class="btn btn-icon btn-color-gray-700 btn-active-color-primary btn-outline w-40px h-40px"
-          aria-label="稍后阅读清单"
-          title="稍后阅读"
-          ><i class="bi bi-bookmark fs-4"></i
-        ></router-link>
+      <div class="d-flex align-items-center ms-3">
+        <ReadingToolsMenu />
       </div>
       <!--begin::Theme mode-->
       <div class="d-flex align-items-center ms-3 ms-lg-4">
@@ -61,22 +55,20 @@
 
 <script lang="ts">
 import { getAssetPath } from "@/core/helpers/assets";
-import { computed, defineComponent } from "vue";
-import { useRoute } from "vue-router";
+import { defineComponent } from "vue";
+import ReadingToolsMenu from "@/layouts/main-layout/header/ReadingToolsMenu.vue";
 import KTSearch from "@/layouts/main-layout/search/Search.vue";
 import KTThemeModeSwitcher from "@/layouts/main-layout/theme-mode/ThemeModeSwitcher.vue";
 
 export default defineComponent({
   name: "layout-topbar",
   components: {
+    ReadingToolsMenu,
     KTSearch,
     KTThemeModeSwitcher,
   },
   setup() {
-    const route = useRoute();
-    const isArticle = computed(() => route.name === "blog-content");
     return {
-      isArticle,
       getAssetPath,
     };
   },

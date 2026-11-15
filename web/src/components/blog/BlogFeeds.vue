@@ -55,6 +55,15 @@
         }}
       </p>
 
+      <div v-if="article.tags?.length" class="d-flex flex-wrap gap-2 mb-4">
+        <router-link
+          v-for="tag in article.tags"
+          :key="tag.id"
+          :to="`/tag/${tag.id}`"
+          class="badge badge-light-primary"
+          >{{ tag.name }}</router-link
+        >
+      </div>
       <div class="d-flex flex-wrap gap-y-2 align-items-center">
         <router-link
           :to="articleUrl"
@@ -94,6 +103,7 @@
           </span>
           {{ likeCount }}
         </button>
+        <SaveForLater class="ms-3" :article="article" />
       </div>
     </div>
   </article>
@@ -102,6 +112,7 @@
 <script setup lang="ts">
 import AuthorAvatar from "@/components/common/AuthorAvatar.vue";
 import { computed, ref } from "vue";
+import SaveForLater from "@/components/blog/SaveForLater.vue";
 import dayjs from "dayjs";
 import type { ArticleList } from "@/core/blog/ArticleTypes";
 import { getAssetPath } from "@/core/helpers/assets";

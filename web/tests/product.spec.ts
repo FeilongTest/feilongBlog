@@ -343,6 +343,7 @@ test("稍后阅读可保存、刷新、移除，不上传个人标题和时间",
   await expect(
     page.getByRole("button", { name: "已收藏", exact: true })
   ).toHaveAttribute("aria-pressed", "true");
+  await page.locator('summary[aria-label="阅读工具"]').click();
   await page.getByRole("link", { name: "稍后阅读清单", exact: true }).click();
   await expect(
     page.getByRole("link", { name: post.title, exact: true })

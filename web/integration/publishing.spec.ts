@@ -158,6 +158,7 @@ test("真实写作流程：服务器草稿到公开专题、SEO 与稍后阅读"
     "独立 SEO 描述"
   );
   await page.getByRole("button", { name: "稍后阅读", exact: true }).click();
+  await page.locator('summary[aria-label="阅读工具"]').click();
   await page.getByRole("link", { name: "稍后阅读清单", exact: true }).click();
   await expect(
     page.getByRole("link", { name: title, exact: true })
